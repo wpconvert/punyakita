@@ -28,7 +28,7 @@
 
     .app {
       width: 100%;
-      max-width: 1050px;
+      max-width: 1280px;
     }
 
     .topbar {
@@ -98,15 +98,15 @@
 
     .grid {
       display: grid;
-      grid-template-columns: 1.2fr 0.8fr;
-      gap: 18px;
+      grid-template-columns: 1.25fr 0.75fr;
+      gap: 20px;
     }
 
     .card {
       background: rgba(10, 25, 45, 0.86);
       border: 1px solid rgba(80, 170, 255, 0.25);
       border-radius: 20px;
-      padding: 22px;
+      padding: 24px;
       box-shadow: 0 0 28px rgba(0, 174, 255, 0.1);
     }
 
@@ -220,6 +220,48 @@
       font-size: 12px;
     }
 
+    .level-panel {
+      margin-top: 18px;
+      padding: 16px;
+      border-radius: 16px;
+      background: rgba(4, 15, 30, 0.72);
+      border: 1px solid rgba(100, 223, 255, 0.18);
+    }
+
+    .level-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+      color: #dff8ff;
+      font-size: 14px;
+    }
+
+    .exp-track {
+      width: 100%;
+      height: 12px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.08);
+      overflow: hidden;
+      border: 1px solid rgba(100, 223, 255, 0.18);
+    }
+
+    .exp-fill {
+      height: 100%;
+      width: 0%;
+      border-radius: 999px;
+      background: linear-gradient(135deg, #009dff, #00e0ff);
+      box-shadow: 0 0 16px rgba(0, 224, 255, 0.45);
+      transition: 0.3s ease;
+    }
+
+    .exp-text {
+      margin-top: 8px;
+      color: #9db7cc;
+      font-size: 12px;
+      text-align: right;
+    }
+
     .modal-overlay {
       position: fixed;
       inset: 0;
@@ -299,6 +341,15 @@
       color: #9db7cc;
       font-size: 13px;
       line-height: 1.4;
+      min-height: 18px;
+    }
+
+    .notice.success {
+      color: #4dffb8;
+    }
+
+    .notice.error {
+      color: #ff6b8a;
     }
 
     @media (max-width: 820px) {
@@ -372,7 +423,7 @@
 
         <div class="stats">
           <div class="stat-box">
-            <strong id="bestWpm">0</strong>
+            <strong id="bestWpm">1</strong>
             <span>Level</span>
           </div>
 
@@ -385,6 +436,17 @@
             <strong id="accountType">Guest</strong>
             <span>Status Akun</span>
           </div>
+        </div>
+
+        <div class="level-panel">
+          <div class="level-row">
+            <span>Progress Level</span>
+            <strong id="levelLabel">Lv. 1</strong>
+          </div>
+          <div class="exp-track">
+            <div class="exp-fill" id="expFill"></div>
+          </div>
+          <div class="exp-text" id="expText">0 / 100 EXP</div>
         </div>
       </div>
 
@@ -440,31 +502,27 @@
       </div>
 
       <div class="form active" id="loginForm">
-        <input type="text" id="loginUsername" placeholder="Username" />
-        <input type="password" id="loginPassword" placeholder="Password" />
+        <input type="text" id="loginUsername" placeholder="Username" autocomplete="off" />
+        <input type="password" id="loginPassword" placeholder="Password" autocomplete="new-password" />
 
         <div class="modal-actions">
           <button class="btn" style="flex:1;" onclick="loginUser()">Login</button>
           <button class="btn btn-danger" style="flex:1;" onclick="closeLoginModal()">Tutup</button>
         </div>
 
-        <p class="notice" id="loginNotice">
-          Login akan dicek langsung ke Sheet USERS lewat GAS.
-        </p>
+        <p class="notice" id="loginNotice"></p>
       </div>
 
       <div class="form" id="registerForm">
-        <input type="text" id="regUsername" placeholder="Username" />
-        <input type="password" id="regPassword" placeholder="Password" />
+        <input type="text" id="regUsername" placeholder="Username" autocomplete="off" />
+        <input type="password" id="regPassword" placeholder="Password" autocomplete="new-password" />
 
         <div class="modal-actions">
           <button class="btn" style="flex:1;" onclick="registerUser()">Register</button>
           <button class="btn btn-danger" style="flex:1;" onclick="closeLoginModal()">Tutup</button>
         </div>
 
-        <p class="notice" id="registerNotice">
-          Register akan menyimpan username dan password ke Sheet USERS lewat GAS.
-        </p>
+        <p class="notice" id="registerNotice"></p>
       </div>
     </div>
   </div>
@@ -505,10 +563,18 @@
     }
 
     function updateUserUI(user) {
+      const level = Number(user.level || 1);
+      const exp = Number(user.exp || 0);
+      const maxExp = level * 100;
+      const expPercent = Math.min((exp / maxExp) * 100, 100);
+
       document.getElementById("userDisplay").textContent = user.displayName || user.username;
-      document.getElementById("bestWpm").textContent = user.level || 1;
-      document.getElementById("totalPlay").textContent = user.exp || 0;
+      document.getElementById("bestWpm").textContent = level;
+      document.getElementById("totalPlay").textContent = exp;
       document.getElementById("accountType").textContent = user.type === "guest" ? "Guest" : "User";
+      document.getElementById("levelLabel").textContent = "Lv. " + level;
+      document.getElementById("expFill").style.width = expPercent + "%";
+      document.getElementById("expText").textContent = exp + " / " + maxExp + " EXP";
 
       if (user.type === "guest") {
         document.getElementById("loginBtn").style.display = "inline-block";
@@ -521,6 +587,12 @@
 
     function openLoginModal() {
       document.getElementById("loginModal").style.display = "flex";
+      document.getElementById("loginUsername").value = "";
+      document.getElementById("loginPassword").value = "";
+      document.getElementById("regUsername").value = "";
+      document.getElementById("regPassword").value = "";
+      setNotice("loginNotice", "", "");
+      setNotice("registerNotice", "", "");
     }
 
     function closeLoginModal() {
@@ -532,6 +604,9 @@
       const registerForm = document.getElementById("registerForm");
       const tabLogin = document.getElementById("tabLogin");
       const tabRegister = document.getElementById("tabRegister");
+
+      setNotice("loginNotice", "", "");
+      setNotice("registerNotice", "", "");
 
       if (type === "login") {
         loginForm.classList.add("active");
@@ -546,24 +621,33 @@
       }
     }
 
+    function setNotice(id, text, type) {
+      const el = document.getElementById(id);
+      el.textContent = text;
+      el.className = "notice";
+
+      if (type) {
+        el.classList.add(type);
+      }
+    }
+
     async function registerUser() {
       const username = document.getElementById("regUsername").value.trim();
       const password = document.getElementById("regPassword").value.trim();
-      const notice = document.getElementById("registerNotice");
 
       if (!username || !password) {
-        notice.textContent = "Username dan password wajib diisi.";
+        setNotice("registerNotice", "Username dan password wajib diisi ✕", "error");
         return;
       }
 
-      notice.textContent = "Memproses register...";
+      setNotice("registerNotice", "Memproses register...", "");
 
       try {
         const res = await fetch(GAS_URL + "?action=register&username=" + encodeURIComponent(username) + "&password=" + encodeURIComponent(password));
         const data = await res.json();
 
         if (data.status !== "success") {
-          notice.textContent = data.message || "Register gagal.";
+          setNotice("registerNotice", (data.message || "Register gagal") + " ✕", "error");
           return;
         }
 
@@ -579,31 +663,37 @@
 
         localStorage.setItem(STORAGE_KEY, JSON.stringify(user));
         updateUserUI(user);
-        closeLoginModal();
-        alert("Register berhasil.");
+        setNotice("registerNotice", "Sukses Register ✓", "success");
+
+        setTimeout(() => {
+          closeLoginModal();
+        }, 700);
       } catch (err) {
-        notice.textContent = "Gagal connect ke GAS.";
+        setNotice("registerNotice", "Gagal connect ke GAS ✕", "error");
       }
     }
 
     async function loginUser() {
       const username = document.getElementById("loginUsername").value.trim();
       const password = document.getElementById("loginPassword").value.trim();
-      const notice = document.getElementById("loginNotice");
 
       if (!username || !password) {
-        notice.textContent = "Username dan password wajib diisi.";
+        setNotice("loginNotice", "Username dan password wajib diisi ✕", "error");
         return;
       }
 
-      notice.textContent = "Memproses login...";
+      setNotice("loginNotice", "Memproses login...", "");
 
       try {
         const res = await fetch(GAS_URL + "?action=login&username=" + encodeURIComponent(username) + "&password=" + encodeURIComponent(password));
         const data = await res.json();
 
         if (data.status !== "success") {
-          notice.textContent = data.message || "Login gagal.";
+          if ((data.message || "").toLowerCase().includes("password")) {
+            setNotice("loginNotice", "Password Salah ✕", "error");
+          } else {
+            setNotice("loginNotice", (data.message || "Login gagal") + " ✕", "error");
+          }
           return;
         }
 
@@ -619,10 +709,13 @@
 
         localStorage.setItem(STORAGE_KEY, JSON.stringify(user));
         updateUserUI(user);
-        closeLoginModal();
-        alert("Login berhasil.");
+        setNotice("loginNotice", "Sukses Login ✓", "success");
+
+        setTimeout(() => {
+          closeLoginModal();
+        }, 700);
       } catch (err) {
-        notice.textContent = "Gagal connect ke GAS.";
+        setNotice("loginNotice", "Gagal connect ke GAS ✕", "error");
       }
     }
 
@@ -634,8 +727,6 @@
         if (data.status !== "success") {
           return;
         }
-
-        const savedUser = JSON.parse(localStorage.getItem(STORAGE_KEY));
 
         const user = {
           type: "user",
@@ -660,12 +751,18 @@
     function startMode(mode) {
       const user = JSON.parse(localStorage.getItem(STORAGE_KEY));
 
-      alert(
+      setNoticeBox(
         "Mode: " + mode +
-        "\nPlayer: " + (user.displayName || user.username) +
-        "\nLevel: " + (user.level || 1) +
-        "\n\nNanti tombol ini akan diarahkan ke halaman game."
+        "<br>Player: " + (user.displayName || user.username) +
+        "<br>Level: " + (user.level || 1) +
+        "<br><br>Nanti tombol ini akan diarahkan ke halaman game."
       );
+    }
+
+    function setNoticeBox(html) {
+      const result = document.getElementById("roomResult");
+      result.style.display = "block";
+      result.innerHTML = html;
     }
 
     function createRoom() {
@@ -677,7 +774,7 @@
       const now = new Date();
       const expiredAt = new Date(now.getTime() + expiredHour * 60 * 60 * 1000);
 
-      const roomLink = window.location.origin + window.location.pathname.replace("lobby.html", "") + "room.html?id=" + roomId;
+      const roomLink = window.location.origin + window.location.pathname.replace("index.html", "").replace("lobby.html", "") + "room.html?id=" + roomId;
 
       const roomData = {
         roomId,
@@ -706,11 +803,11 @@
       const code = document.getElementById("joinCode").value.trim().toUpperCase();
 
       if (!code) {
-        alert("Masukkan kode room dulu.");
+        setNoticeBox("Masukkan kode room dulu ✕");
         return;
       }
 
-      alert("Join room: " + code + "\n\nNanti akan dicek ke GAS apakah room masih aktif atau expired.");
+      setNoticeBox("Join room: " + code + "<br><br>Nanti akan dicek ke GAS apakah room masih aktif atau expired.");
     }
 
     function generateRoomId() {
