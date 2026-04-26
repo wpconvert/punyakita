@@ -1,0 +1,671 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Typing Race Lobby</title>
+
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: Arial, sans-serif;
+    }
+
+    body {
+      min-height: 100vh;
+      background:
+        radial-gradient(circle at top left, rgba(0, 255, 255, 0.14), transparent 35%),
+        radial-gradient(circle at bottom right, rgba(0, 110, 255, 0.18), transparent 35%),
+        #07111f;
+      color: #eaf6ff;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 22px;
+    }
+
+    .app {
+      width: 100%;
+      max-width: 1050px;
+    }
+
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 22px;
+      padding: 18px 20px;
+      background: rgba(10, 25, 45, 0.86);
+      border: 1px solid rgba(80, 170, 255, 0.25);
+      border-radius: 18px;
+      box-shadow: 0 0 28px rgba(0, 174, 255, 0.12);
+    }
+
+    .brand h1 {
+      font-size: 24px;
+      color: #64dfff;
+      letter-spacing: 1px;
+    }
+
+    .brand p {
+      font-size: 13px;
+      color: #9db7cc;
+      margin-top: 4px;
+    }
+
+    .account-box {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .user-pill {
+      padding: 10px 14px;
+      border-radius: 999px;
+      background: rgba(100, 223, 255, 0.12);
+      border: 1px solid rgba(100, 223, 255, 0.28);
+      color: #dff8ff;
+      font-size: 14px;
+      white-space: nowrap;
+    }
+
+    button {
+      border: none;
+      cursor: pointer;
+      transition: 0.2s ease;
+    }
+
+    .btn {
+      padding: 11px 16px;
+      border-radius: 12px;
+      font-weight: bold;
+      color: white;
+      background: linear-gradient(135deg, #009dff, #00e0ff);
+      box-shadow: 0 8px 18px rgba(0, 157, 255, 0.25);
+    }
+
+    .btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 24px rgba(0, 224, 255, 0.35);
+    }
+
+    .btn-danger {
+      background: linear-gradient(135deg, #ff4d6d, #ff8a00);
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 1.2fr 0.8fr;
+      gap: 18px;
+    }
+
+    .card {
+      background: rgba(10, 25, 45, 0.86);
+      border: 1px solid rgba(80, 170, 255, 0.25);
+      border-radius: 20px;
+      padding: 22px;
+      box-shadow: 0 0 28px rgba(0, 174, 255, 0.1);
+    }
+
+    .card h2 {
+      color: #64dfff;
+      margin-bottom: 8px;
+    }
+
+    .card-desc {
+      color: #9db7cc;
+      font-size: 14px;
+      margin-bottom: 18px;
+      line-height: 1.5;
+    }
+
+    .mode-list {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 14px;
+    }
+
+    .mode-card {
+      text-align: left;
+      padding: 18px;
+      border-radius: 16px;
+      background: rgba(4, 15, 30, 0.8);
+      border: 1px solid rgba(100, 223, 255, 0.18);
+      color: white;
+    }
+
+    .mode-card:hover {
+      border-color: rgba(100, 223, 255, 0.75);
+      transform: translateY(-3px);
+      background: rgba(8, 35, 60, 0.9);
+    }
+
+    .mode-card h3 {
+      font-size: 17px;
+      margin-bottom: 7px;
+      color: #ffffff;
+    }
+
+    .mode-card p {
+      color: #9db7cc;
+      font-size: 13px;
+      line-height: 1.4;
+    }
+
+    .side-section {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .input-group {
+      display: flex;
+      gap: 10px;
+    }
+
+    input, select {
+      width: 100%;
+      padding: 12px 13px;
+      border-radius: 12px;
+      border: 1px solid rgba(100, 223, 255, 0.25);
+      background: rgba(4, 15, 30, 0.9);
+      color: white;
+      outline: none;
+    }
+
+    input:focus, select:focus {
+      border-color: #64dfff;
+    }
+
+    .room-result {
+      margin-top: 14px;
+      padding: 13px;
+      border-radius: 12px;
+      background: rgba(100, 223, 255, 0.1);
+      border: 1px solid rgba(100, 223, 255, 0.25);
+      color: #dff8ff;
+      display: none;
+      word-break: break-all;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-top: 18px;
+    }
+
+    .stat-box {
+      background: rgba(4, 15, 30, 0.7);
+      border: 1px solid rgba(100, 223, 255, 0.16);
+      border-radius: 14px;
+      padding: 14px;
+      text-align: center;
+    }
+
+    .stat-box strong {
+      display: block;
+      color: #64dfff;
+      font-size: 20px;
+      margin-bottom: 4px;
+    }
+
+    .stat-box span {
+      color: #9db7cc;
+      font-size: 12px;
+    }
+
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.64);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      padding: 18px;
+      z-index: 99;
+    }
+
+    .modal {
+      width: 100%;
+      max-width: 420px;
+      background: #0a192d;
+      border: 1px solid rgba(100, 223, 255, 0.28);
+      border-radius: 20px;
+      padding: 22px;
+      box-shadow: 0 0 35px rgba(0, 224, 255, 0.16);
+      animation: pop 0.2s ease;
+    }
+
+    @keyframes pop {
+      from {
+        transform: scale(0.94);
+        opacity: 0;
+      }
+      to {
+        transform: scale(1);
+        opacity: 1;
+      }
+    }
+
+    .modal h2 {
+      color: #64dfff;
+      margin-bottom: 14px;
+    }
+
+    .tabs {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+
+    .tab {
+      flex: 1;
+      padding: 10px;
+      border-radius: 10px;
+      background: rgba(4, 15, 30, 0.9);
+      color: #9db7cc;
+      border: 1px solid rgba(100, 223, 255, 0.18);
+    }
+
+    .tab.active {
+      background: linear-gradient(135deg, #009dff, #00e0ff);
+      color: white;
+    }
+
+    .form {
+      display: none;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .form.active {
+      display: flex;
+    }
+
+    .modal-actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 14px;
+    }
+
+    .notice {
+      margin-top: 12px;
+      color: #9db7cc;
+      font-size: 13px;
+      line-height: 1.4;
+    }
+
+    @media (max-width: 820px) {
+      .topbar {
+        flex-direction: column;
+        align-items: stretch;
+      }
+
+      .account-box {
+        justify-content: space-between;
+      }
+
+      .grid {
+        grid-template-columns: 1fr;
+      }
+
+      .mode-list {
+        grid-template-columns: 1fr;
+      }
+
+      .stats {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="app">
+    <div class="topbar">
+      <div class="brand">
+        <h1>Typing Race</h1>
+        <p>Lobby permainan mengetik cepat seperti TypeRace & 10FastFingers.</p>
+      </div>
+
+      <div class="account-box">
+        <div class="user-pill" id="userDisplay">Guest</div>
+        <button class="btn" id="loginBtn" onclick="openLoginModal()">Login / Register</button>
+        <button class="btn btn-danger" id="logoutBtn" onclick="logoutUser()" style="display:none;">Logout</button>
+      </div>
+    </div>
+
+    <div class="grid">
+      <div class="card">
+        <h2>Pilih Mode Permainan</h2>
+        <p class="card-desc">
+          Untuk sekarang ini baru tampilan lobby dulu. Nanti tombol ini bisa kita sambungkan ke halaman game dan GAS.
+        </p>
+
+        <div class="mode-list">
+          <button class="mode-card" onclick="startMode('solo')">
+            <h3>⌨️ Main Sendiri</h3>
+            <p>Latihan mengetik sendiri, cocok untuk test WPM dan akurasi.</p>
+          </button>
+
+          <button class="mode-card" onclick="startMode('random')">
+            <h3>⚡ Random Player</h3>
+            <p>Cari lawan acak yang sedang online atau masuk antrean.</p>
+          </button>
+
+          <button class="mode-card" onclick="startMode('typerace')">
+            <h3>🏁 TypeRace</h3>
+            <p>Mode balapan mengetik dengan progress lawan.</p>
+          </button>
+
+          <button class="mode-card" onclick="startMode('10fast')">
+            <h3>⏱️ 10FastFingers</h3>
+            <p>Mode test cepat 60 detik dengan kata random.</p>
+          </button>
+        </div>
+
+        <div class="stats">
+          <div class="stat-box">
+            <strong id="bestWpm">0</strong>
+            <span>Best WPM</span>
+          </div>
+
+          <div class="stat-box">
+            <strong id="totalPlay">0</strong>
+            <span>Total Main</span>
+          </div>
+
+          <div class="stat-box">
+            <strong id="accountType">Guest</strong>
+            <span>Status Akun</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="side-section">
+        <div class="card">
+          <h2>Create Room</h2>
+          <p class="card-desc">
+            Buat room privat. Link room nanti bisa dibuat expired otomatis 1 atau 2 jam lewat GAS.
+          </p>
+
+          <select id="roomMode">
+            <option value="typerace">TypeRace</option>
+            <option value="10fast">10FastFingers</option>
+            <option value="practice">Practice</option>
+          </select>
+
+          <br><br>
+
+          <select id="roomExpired">
+            <option value="1">Expired 1 Jam</option>
+            <option value="2">Expired 2 Jam</option>
+          </select>
+
+          <br><br>
+
+          <button class="btn" style="width:100%;" onclick="createRoom()">Create Room</button>
+
+          <div class="room-result" id="roomResult"></div>
+        </div>
+
+        <div class="card">
+          <h2>Join Room</h2>
+          <p class="card-desc">
+            Masukkan kode room dari teman kamu.
+          </p>
+
+          <div class="input-group">
+            <input type="text" id="joinCode" placeholder="Contoh: ABC123" />
+            <button class="btn" onclick="joinRoom()">Join</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL LOGIN / REGISTER -->
+  <div class="modal-overlay" id="loginModal">
+    <div class="modal">
+      <h2>Akun Pemain</h2>
+
+      <div class="tabs">
+        <button class="tab active" id="tabLogin" onclick="switchTab('login')">Login</button>
+        <button class="tab" id="tabRegister" onclick="switchTab('register')">Register</button>
+      </div>
+
+      <div class="form active" id="loginForm">
+        <input type="text" id="loginUsername" placeholder="Username" />
+        <input type="password" id="loginPassword" placeholder="Password" />
+
+        <div class="modal-actions">
+          <button class="btn" style="flex:1;" onclick="fakeLogin()">Login</button>
+          <button class="btn btn-danger" style="flex:1;" onclick="closeLoginModal()">Tutup</button>
+        </div>
+
+        <p class="notice">
+          Untuk sekarang login masih dummy. Nanti akan dicek ke Sheet USERS lewat GAS.
+        </p>
+      </div>
+
+      <div class="form" id="registerForm">
+        <input type="text" id="regUsername" placeholder="Username" />
+        <input type="text" id="regDisplayName" placeholder="Nama Tampilan" />
+        <input type="password" id="regPassword" placeholder="Password" />
+
+        <div class="modal-actions">
+          <button class="btn" style="flex:1;" onclick="fakeRegister()">Register</button>
+          <button class="btn btn-danger" style="flex:1;" onclick="closeLoginModal()">Tutup</button>
+        </div>
+
+        <p class="notice">
+          Nanti register akan menyimpan username, password hash, display name, dan tanggal daftar ke Sheets.
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const STORAGE_KEY = "typingRaceUser";
+
+    document.addEventListener("DOMContentLoaded", () => {
+      initUser();
+    });
+
+    function initUser() {
+      let savedUser = localStorage.getItem(STORAGE_KEY);
+
+      if (!savedUser) {
+        const guestNumber = Math.floor(10000 + Math.random() * 90000);
+
+        const guestUser = {
+          type: "guest",
+          username: "Guest_" + guestNumber,
+          displayName: "Guest_" + guestNumber,
+          bestWpm: 0,
+          totalPlay: 0
+        };
+
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(guestUser));
+        savedUser = JSON.stringify(guestUser);
+      }
+
+      updateUserUI(JSON.parse(savedUser));
+    }
+
+    function updateUserUI(user) {
+      document.getElementById("userDisplay").textContent = user.displayName;
+      document.getElementById("bestWpm").textContent = user.bestWpm || 0;
+      document.getElementById("totalPlay").textContent = user.totalPlay || 0;
+      document.getElementById("accountType").textContent = user.type === "guest" ? "Guest" : "User";
+
+      if (user.type === "guest") {
+        document.getElementById("loginBtn").style.display = "inline-block";
+        document.getElementById("logoutBtn").style.display = "none";
+      } else {
+        document.getElementById("loginBtn").style.display = "none";
+        document.getElementById("logoutBtn").style.display = "inline-block";
+      }
+    }
+
+    function openLoginModal() {
+      document.getElementById("loginModal").style.display = "flex";
+    }
+
+    function closeLoginModal() {
+      document.getElementById("loginModal").style.display = "none";
+    }
+
+    function switchTab(type) {
+      const loginForm = document.getElementById("loginForm");
+      const registerForm = document.getElementById("registerForm");
+      const tabLogin = document.getElementById("tabLogin");
+      const tabRegister = document.getElementById("tabRegister");
+
+      if (type === "login") {
+        loginForm.classList.add("active");
+        registerForm.classList.remove("active");
+        tabLogin.classList.add("active");
+        tabRegister.classList.remove("active");
+      } else {
+        loginForm.classList.remove("active");
+        registerForm.classList.add("active");
+        tabLogin.classList.remove("active");
+        tabRegister.classList.add("active");
+      }
+    }
+
+    function fakeLogin() {
+      const username = document.getElementById("loginUsername").value.trim();
+      const password = document.getElementById("loginPassword").value.trim();
+
+      if (!username || !password) {
+        alert("Username dan password wajib diisi.");
+        return;
+      }
+
+      const user = {
+        type: "user",
+        username: username,
+        displayName: username,
+        bestWpm: 0,
+        totalPlay: 0
+      };
+
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(user));
+      updateUserUI(user);
+      closeLoginModal();
+
+      alert("Login dummy berhasil. Nanti bagian ini akan connect ke GAS.");
+    }
+
+    function fakeRegister() {
+      const username = document.getElementById("regUsername").value.trim();
+      const displayName = document.getElementById("regDisplayName").value.trim();
+      const password = document.getElementById("regPassword").value.trim();
+
+      if (!username || !displayName || !password) {
+        alert("Semua data register wajib diisi.");
+        return;
+      }
+
+      const user = {
+        type: "user",
+        username: username,
+        displayName: displayName,
+        bestWpm: 0,
+        totalPlay: 0
+      };
+
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(user));
+      updateUserUI(user);
+      closeLoginModal();
+
+      alert("Register dummy berhasil. Nanti data ini akan disimpan ke Sheet USERS.");
+    }
+
+    function logoutUser() {
+      localStorage.removeItem(STORAGE_KEY);
+      initUser();
+    }
+
+    function startMode(mode) {
+      const user = JSON.parse(localStorage.getItem(STORAGE_KEY));
+
+      alert(
+        "Mode: " + mode +
+        "\nPlayer: " + user.displayName +
+        "\n\nNanti tombol ini akan diarahkan ke halaman game."
+      );
+
+      // Nanti bisa diganti:
+      // window.location.href = "game.html?mode=" + mode;
+    }
+
+    function createRoom() {
+      const user = JSON.parse(localStorage.getItem(STORAGE_KEY));
+      const mode = document.getElementById("roomMode").value;
+      const expiredHour = document.getElementById("roomExpired").value;
+
+      const roomId = generateRoomId();
+      const now = new Date();
+      const expiredAt = new Date(now.getTime() + expiredHour * 60 * 60 * 1000);
+
+      const roomLink = window.location.origin + window.location.pathname.replace("lobby.html", "") + "room.html?id=" + roomId;
+
+      const roomData = {
+        roomId,
+        host: user.displayName,
+        mode,
+        createdAt: now.toISOString(),
+        expiredAt: expiredAt.toISOString(),
+        status: "OPEN"
+      };
+
+      localStorage.setItem("room_" + roomId, JSON.stringify(roomData));
+
+      const result = document.getElementById("roomResult");
+      result.style.display = "block";
+      result.innerHTML = `
+        <b>Room berhasil dibuat!</b><br>
+        Room ID: ${roomId}<br>
+        Mode: ${mode}<br>
+        Host: ${user.displayName}<br>
+        Expired: ${expiredHour} jam<br><br>
+        Link:<br>${roomLink}
+      `;
+    }
+
+    function joinRoom() {
+      const code = document.getElementById("joinCode").value.trim().toUpperCase();
+
+      if (!code) {
+        alert("Masukkan kode room dulu.");
+        return;
+      }
+
+      alert("Join room: " + code + "\n\nNanti akan dicek ke GAS apakah room masih aktif atau expired.");
+
+      // Nanti bisa diganti:
+      // window.location.href = "room.html?id=" + code;
+    }
+
+    function generateRoomId() {
+      const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+      let id = "";
+
+      for (let i = 0; i < 6; i++) {
+        id += chars.charAt(Math.floor(Math.random() * chars.length));
+      }
+
+      return id;
+    }
+  </script>
+</body>
+</html>
