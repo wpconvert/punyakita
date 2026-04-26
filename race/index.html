@@ -25,8 +25,8 @@
     }
 
     .app {
-      width: 980px;
-      min-width: 980px;
+      width: 1380px;
+      min-width: 1380px;
       background: #f8fbff;
       border: 1px solid #c7d9ea;
       border-radius: 10px;
@@ -128,7 +128,7 @@
 
     .lane {
       position: relative;
-      height: 58px;
+      height: 62px;
       border-bottom: 2px dashed #f0b629;
       overflow: hidden;
     }
@@ -136,7 +136,7 @@
     .lane-name {
       position: absolute;
       left: 0;
-      top: 7px;
+      top: 8px;
       width: 125px;
       text-align: right;
       padding-right: 12px;
@@ -149,10 +149,32 @@
     .car {
       position: absolute;
       left: 135px;
-      top: 9px;
-      font-size: 36px;
+      top: 8px;
+      font-size: 38px;
       transition: left 0.12s linear;
       filter: drop-shadow(0 2px 2px rgba(0,0,0,0.2));
+      z-index: 2;
+    }
+
+    .finish-line {
+      position: absolute;
+      right: 70px;
+      top: 5px;
+      bottom: 5px;
+      width: 4px;
+      background: #ff2525;
+      z-index: 1;
+    }
+
+    .lane-position {
+      position: absolute;
+      right: 10px;
+      top: 20px;
+      width: 50px;
+      text-align: left;
+      font-size: 15px;
+      font-weight: bold;
+      color: #111;
     }
 
     .speed-line {
@@ -177,6 +199,12 @@
       color: #000;
       margin-bottom: 18px;
       white-space: pre-wrap;
+      min-height: 96px;
+    }
+
+    .char {
+      color: #000;
+      display: inline;
     }
 
     .char.correct {
@@ -184,11 +212,13 @@
     }
 
     .char.wrong {
-      color: #df2d42;
-      background: #ffe1e6;
+      color: #ffffff;
+      background: #ff0000;
+      border-radius: 2px;
     }
 
     .char.current {
+      color: #000;
       background: #d9ecff;
       border-radius: 3px;
     }
@@ -288,16 +318,22 @@
       <div class="lane">
         <div class="lane-name" id="playerName">Player<br>(you)</div>
         <div class="car" id="playerCar">🏎️</div>
+        <div class="finish-line"></div>
+        <div class="lane-position" id="playerPos"></div>
       </div>
 
       <div class="lane">
         <div class="lane-name">Bot Cepat<br>(bot)</div>
         <div class="car" id="botCar1">🚗</div>
+        <div class="finish-line"></div>
+        <div class="lane-position" id="bot1Pos"></div>
       </div>
 
       <div class="lane">
         <div class="lane-name">Bot Santai<br>(bot)</div>
         <div class="car" id="botCar2">🚙</div>
+        <div class="finish-line"></div>
+        <div class="lane-position" id="bot2Pos"></div>
       </div>
     </div>
 
@@ -346,6 +382,7 @@
     const STORAGE_KEY = "typingRaceUser";
 
     const texts = [
+      "Siapa takut menjadi perawan tua? Hari gini, menikah bukan lagi sekedar institusi romantis nggak jelas. Menikah adalah kerjasama dua pihak yang menguntungkan.",
       "Aku bukan orang yang lemah. Kalau aku lemah, sudah kubersembunyi di dasar lemah. Namun aku orang yang kuat. Dengan dagu terangkat, menggenggam kejujuran erat erat.",
       "Aku percaya bahwa usaha yang dilakukan dengan sungguh sungguh akan membawa hasil yang baik.",
       "Jangan menyerah hanya karena perjalanan terasa sulit, sebab setiap langkah kecil tetap berarti.",
@@ -361,9 +398,13 @@
     let startTime = null;
     let endTime = null;
     let wrongCount = 0;
-    let lastValue = "";
     let finishOrder = [];
     let botInterval = null;
+    let botProgress1 = 0;
+    let botProgress2 = 0;
+
+    const trackStart = 135;
+    const maxMove = 1080;
 
     const target = document.getElementById("targetText");
     const input = document.getElementById("typingInput");
@@ -375,6 +416,10 @@
       loadPlayerName();
       renderText("");
       resetCars();
+    });
+
+    window.addEventListener("load", () => {
+      renderText("");
     });
 
     function loadPlayerName() {
@@ -405,9 +450,33 @@
           span.classList.add("current");
         }
 
-        span.textContent = text[i];
+        span.textContent = text[i] || " ";
         target.appendChild(span);
       }
+    }
+
+    function getCorrectPrefixLength(value) {
+      let count = 0;
+
+      for (let i = 0; i < value.length; i++) {
+        if (value[i] === text[i]) {
+          count++;
+        } else {
+          break;
+        }
+      }
+
+      return count;
+    }
+
+    function hasTypingError(value) {
+      for (let i = 0; i < value.length; i++) {
+        if (value[i] !== text[i]) {
+          return true;
+        }
+      }
+
+      return false;
     }
 
     function startCountdown() {
@@ -463,16 +532,14 @@
       if (!started || finished) return;
 
       const value = input.value;
+      const prefixLength = getCorrectPrefixLength(value);
+      const hasError = hasTypingError(value);
 
-      if (!text.startsWith(value)) {
+      if (hasError) {
         wrongCount++;
-        input.value = lastValue;
-        renderText(lastValue);
-        return;
       }
 
-      lastValue = value;
-      correctIndex = value.length;
+      correctIndex = prefixLength;
 
       renderText(value);
       updatePlayerProgress();
@@ -484,8 +551,7 @@
 
     function updatePlayerProgress() {
       const progress = correctIndex / text.length;
-      const maxMove = 760;
-      const left = 135 + progress * maxMove;
+      const left = trackStart + progress * maxMove;
 
       playerCar.style.left = left + "px";
 
@@ -495,8 +561,8 @@
     }
 
     function startBots() {
-      let botProgress1 = 0;
-      let botProgress2 = 0;
+      botProgress1 = 0;
+      botProgress2 = 0;
 
       const speed1 = 0.75 + Math.random() * 0.35;
       const speed2 = 0.55 + Math.random() * 0.25;
@@ -510,18 +576,20 @@
         botProgress1 += speed1;
         botProgress2 += speed2;
 
-        bot1.style.left = (135 + botProgress1) + "px";
-        bot2.style.left = (135 + botProgress2) + "px";
+        bot1.style.left = (trackStart + botProgress1) + "px";
+        bot2.style.left = (trackStart + botProgress2) + "px";
 
-        if (botProgress1 >= 760 && !finishOrder.includes("Bot Cepat")) {
+        if (botProgress1 >= maxMove && !finishOrder.includes("Bot Cepat")) {
           finishOrder.push("Bot Cepat");
+          document.getElementById("bot1Pos").textContent = getPositionText(finishOrder.length);
         }
 
-        if (botProgress2 >= 760 && !finishOrder.includes("Bot Santai")) {
+        if (botProgress2 >= maxMove && !finishOrder.includes("Bot Santai")) {
           finishOrder.push("Bot Santai");
+          document.getElementById("bot2Pos").textContent = getPositionText(finishOrder.length);
         }
 
-        if (botProgress1 >= 760 && botProgress2 >= 760) {
+        if (botProgress1 >= maxMove && botProgress2 >= maxMove && !finishOrder.includes("Player")) {
           finishRace("bot");
         }
       }, 50);
@@ -538,6 +606,17 @@
 
       if (!finishOrder.includes("Player")) {
         finishOrder.push("Player");
+        document.getElementById("playerPos").textContent = getPositionText(finishOrder.length);
+      }
+
+      if (!finishOrder.includes("Bot Cepat")) {
+        finishOrder.push("Bot Cepat");
+        document.getElementById("bot1Pos").textContent = getPositionText(finishOrder.length);
+      }
+
+      if (!finishOrder.includes("Bot Santai")) {
+        finishOrder.push("Bot Santai");
+        document.getElementById("bot2Pos").textContent = getPositionText(finishOrder.length);
       }
 
       const durationMinutes = Math.max((endTime - startTime) / 60000, 0.01);
@@ -552,17 +631,27 @@
 
       document.getElementById("resultWpm").textContent = wpm;
       document.getElementById("resultAccuracy").textContent = accuracy + "%";
-      document.getElementById("resultPosition").textContent = position;
+      document.getElementById("resultPosition").textContent = getPositionText(position);
       document.getElementById("resultExp").textContent = exp;
       document.getElementById("resultBox").style.display = "block";
       document.getElementById("raceTitle").textContent = "Race Finished!";
       document.getElementById("readyText").textContent = winner === "player" ? "Kamu finish!" : "Bot finish duluan!";
     }
 
+    function getPositionText(position) {
+      if (position === 1) return "1st";
+      if (position === 2) return "2nd";
+      if (position === 3) return "3rd";
+      return position + "th";
+    }
+
     function resetCars() {
-      playerCar.style.left = "135px";
-      bot1.style.left = "135px";
-      bot2.style.left = "135px";
+      playerCar.style.left = trackStart + "px";
+      bot1.style.left = trackStart + "px";
+      bot2.style.left = trackStart + "px";
+      document.getElementById("playerPos").textContent = "";
+      document.getElementById("bot1Pos").textContent = "";
+      document.getElementById("bot2Pos").textContent = "";
     }
 
     function goBack() {
