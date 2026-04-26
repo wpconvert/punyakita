@@ -400,9 +400,9 @@
         </p>
 
         <div class="mode-list">
-          <button class="mode-card" onclick="startMode('solo')">
-            <h3>⌨️ Main Sendiri</h3>
-            <p>Latihan mengetik sendiri, cocok untuk test WPM dan akurasi.</p>
+          <button class="mode-card" onclick="startMode('skin')">
+            <h3>🎨 Ubah Skin</h3>
+            <p>Ganti tampilan mobil atau animasi sesuai skin yang sudah terbuka.</p>
           </button>
 
           <button class="mode-card" onclick="startMode('random')">
@@ -530,6 +530,8 @@
   <script>
     const GAS_URL = "https://script.google.com/macros/s/AKfycbzuzOVUk6zph03Bsk0jZpRhL4z2DF_CD7ESzdND62PcsnVk3LE-o9yupPUD729ULlk03g/exec";
     const STORAGE_KEY = "typingRaceUser";
+    const TYPERACE_URL = "https://wpconvert.github.io/punyakita/10fast/index.html";
+    const TENFAST_URL = "https://wpconvert.github.io/punyakita/10fast/index.html";
 
     document.addEventListener("DOMContentLoaded", () => {
       initUser();
@@ -749,6 +751,16 @@
     }
 
     function startMode(mode) {
+      if (mode === "typerace") {
+        window.location.href = TYPERACE_URL;
+        return;
+      }
+
+      if (mode === "10fast") {
+        window.location.href = TENFAST_URL;
+        return;
+      }
+
       const user = JSON.parse(localStorage.getItem(STORAGE_KEY));
 
       setNoticeBox(
