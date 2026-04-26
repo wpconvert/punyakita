@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TypeRace Solo</title>
+
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: Arial, sans-serif;
+    }
+
+    body {
+      min-height: 100vh;
+      background:
+        radial-gradient(circle at top left, rgba(0, 255, 255, 0.14), transparent 35%),
+        radial-gradient(circle at bottom right, rgba(0, 110, 255, 0.18), transparent 35%),
+        #07111f;
+      padding: 18px;
+      color: #111827;
+      overflow-x: auto;
+    }
+
+    .app {
+      width: 980px;
+      min-width: 980px;
+      background: #f8fbff;
+      border: 1px solid #c7d9ea;
+      border-radius: 10px;
+      padding: 22px;
+      box-shadow: 0 0 28px rgba(0, 174, 255, 0.15);
+    }
+
+    .title {
+      color: #2f55a4;
+      font-size: 22px;
+      font-weight: bold;
+      margin-bottom: 12px;
+    }
+
+    .start-panel {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 16px;
+      background: #eef7fd;
+      border: 1px solid #bdd6e7;
+      border-radius: 9px;
+      padding: 12px 14px;
+      width: fit-content;
+    }
+
+    .light-box {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: #111;
+      padding: 7px 10px;
+      border-radius: 8px;
+    }
+
+    .light {
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      background: #1d1d1d;
+      border: 3px solid #444;
+      box-shadow: inset -5px -5px 9px rgba(0,0,0,0.45);
+    }
+
+    .light.red.active {
+      background: #ff3b4f;
+      box-shadow: 0 0 12px rgba(255, 59, 79, 0.9);
+    }
+
+    .light.yellow.active {
+      background: #ffd23c;
+      box-shadow: 0 0 12px rgba(255, 210, 60, 0.9);
+    }
+
+    .light.green.active {
+      background: #38e87d;
+      box-shadow: 0 0 12px rgba(56, 232, 125, 0.9);
+    }
+
+    .ready-text {
+      color: #2f55a4;
+      font-size: 17px;
+      font-weight: bold;
+      min-width: 160px;
+    }
+
+    .count-number {
+      color: #111;
+      font-size: 28px;
+      font-family: monospace;
+      font-weight: bold;
+      min-width: 52px;
+      text-align: right;
+    }
+
+    .start-btn {
+      padding: 11px 22px;
+      border: none;
+      border-radius: 8px;
+      background: #238bd6;
+      color: white;
+      font-size: 15px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    .start-btn:hover {
+      background: #1576bb;
+    }
+
+    .start-btn:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+    }
+
+    .race-top {
+      margin-bottom: 12px;
+    }
+
+    .lane {
+      position: relative;
+      height: 58px;
+      border-bottom: 2px dashed #f0b629;
+      overflow: hidden;
+    }
+
+    .lane-name {
+      position: absolute;
+      left: 0;
+      top: 7px;
+      width: 125px;
+      text-align: right;
+      padding-right: 12px;
+      color: #4c7c8e;
+      font-size: 15px;
+      font-weight: bold;
+      line-height: 1.2;
+    }
+
+    .car {
+      position: absolute;
+      left: 135px;
+      top: 9px;
+      font-size: 36px;
+      transition: left 0.12s linear;
+      filter: drop-shadow(0 2px 2px rgba(0,0,0,0.2));
+    }
+
+    .speed-line {
+      text-align: right;
+      color: #5f7889;
+      font-size: 14px;
+      margin-bottom: 14px;
+    }
+
+    .typing-panel {
+      background: #eef7fd;
+      border: 1px solid #bdd6e7;
+      border-radius: 9px;
+      padding: 18px;
+      margin-bottom: 22px;
+    }
+
+    .target-text {
+      font-size: 22px;
+      line-height: 1.5;
+      font-family: "Courier New", monospace;
+      color: #000;
+      margin-bottom: 18px;
+      white-space: pre-wrap;
+    }
+
+    .char.correct {
+      color: #18a558;
+    }
+
+    .char.wrong {
+      color: #df2d42;
+      background: #ffe1e6;
+    }
+
+    .char.current {
+      background: #d9ecff;
+      border-radius: 3px;
+    }
+
+    .input-box {
+      width: 100%;
+      padding: 10px 12px;
+      font-family: "Courier New", monospace;
+      font-size: 22px;
+      border: 1px solid #b7c7d9;
+      background: white;
+      color: #111;
+      outline: none;
+    }
+
+    .input-box:focus {
+      border-color: #4aa8ff;
+      box-shadow: 0 0 0 3px rgba(74, 168, 255, 0.18);
+    }
+
+    .menu-btn {
+      padding: 17px 28px;
+      background: #ffb21c;
+      border: none;
+      border-radius: 7px;
+      color: white;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+      min-width: 260px;
+    }
+
+    .menu-btn:hover {
+      background: #ff9900;
+    }
+
+    .result {
+      display: none;
+      margin-top: 18px;
+      background: #fff;
+      border: 1px solid #bdd6e7;
+      border-radius: 9px;
+      padding: 18px;
+    }
+
+    .result h2 {
+      color: #2f55a4;
+      margin-bottom: 14px;
+    }
+
+    .result-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+    }
+
+    .stat-box {
+      border: 1px solid #d4e2ee;
+      border-radius: 8px;
+      padding: 14px;
+      text-align: center;
+      background: #f2f8fc;
+    }
+
+    .stat-box strong {
+      display: block;
+      color: #2f55a4;
+      font-size: 26px;
+      margin-bottom: 4px;
+    }
+
+    .stat-box span {
+      color: #607789;
+      font-size: 13px;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="app">
+    <div class="title" id="raceTitle">The race is about to start!</div>
+
+    <div class="start-panel">
+      <button class="start-btn" id="startBtn" onclick="startCountdown()">Start Race</button>
+
+      <div class="light-box">
+        <div class="light red" id="redLight"></div>
+        <div class="light yellow" id="yellowLight"></div>
+        <div class="light green" id="greenLight"></div>
+      </div>
+
+      <div class="ready-text" id="readyText">Tekan Start untuk mulai</div>
+      <div class="count-number" id="countNumber">:07</div>
+    </div>
+
+    <div class="race-top">
+      <div class="lane">
+        <div class="lane-name" id="playerName">Player<br>(you)</div>
+        <div class="car" id="playerCar">🏎️</div>
+      </div>
+
+      <div class="lane">
+        <div class="lane-name">Bot Cepat<br>(bot)</div>
+        <div class="car" id="botCar1">🚗</div>
+      </div>
+
+      <div class="lane">
+        <div class="lane-name">Bot Santai<br>(bot)</div>
+        <div class="car" id="botCar2">🚙</div>
+      </div>
+    </div>
+
+    <div class="speed-line" id="speedLine">0 cpm</div>
+
+    <div class="typing-panel">
+      <div class="target-text" id="targetText"></div>
+      <input
+        class="input-box"
+        id="typingInput"
+        placeholder="Type the above text here when the race begins"
+        disabled
+        autocomplete="off"
+      />
+    </div>
+
+    <button class="menu-btn" onclick="goBack()">Main menu (leave race)</button>
+
+    <div class="result" id="resultBox">
+      <h2>Hasil Race</h2>
+
+      <div class="result-grid">
+        <div class="stat-box">
+          <strong id="resultWpm">0</strong>
+          <span>WPM</span>
+        </div>
+
+        <div class="stat-box">
+          <strong id="resultAccuracy">0%</strong>
+          <span>Akurasi</span>
+        </div>
+
+        <div class="stat-box">
+          <strong id="resultPosition">-</strong>
+          <span>Posisi</span>
+        </div>
+
+        <div class="stat-box">
+          <strong id="resultExp">0</strong>
+          <span>EXP</span>
+        </div>
+      </div>
+    </div>
+      </div>
+  <script>
+    const STORAGE_KEY = "typingRaceUser";
+
+    const texts = [
+      "Aku bukan orang yang lemah. Kalau aku lemah, sudah kubersembunyi di dasar lemah. Namun aku orang yang kuat. Dengan dagu terangkat, menggenggam kejujuran erat erat.",
+      "Aku percaya bahwa usaha yang dilakukan dengan sungguh sungguh akan membawa hasil yang baik.",
+      "Jangan menyerah hanya karena perjalanan terasa sulit, sebab setiap langkah kecil tetap berarti.",
+      "Kecepatan mengetik yang baik datang dari latihan, fokus, dan kebiasaan membaca teks dengan teliti.",
+      "Permainan ini dibuat untuk melatih ketepatan, kecepatan, dan konsentrasi saat mengetik."
+    ];
+
+    let text = texts[Math.floor(Math.random() * texts.length)];
+    let correctIndex = 0;
+    let started = false;
+    let finished = false;
+    let countdownRunning = false;
+    let startTime = null;
+    let endTime = null;
+    let wrongCount = 0;
+    let lastValue = "";
+    let finishOrder = [];
+    let botInterval = null;
+
+    const target = document.getElementById("targetText");
+    const input = document.getElementById("typingInput");
+    const playerCar = document.getElementById("playerCar");
+    const bot1 = document.getElementById("botCar1");
+    const bot2 = document.getElementById("botCar2");
+
+    document.addEventListener("DOMContentLoaded", () => {
+      loadPlayerName();
+      renderText("");
+      resetCars();
+    });
+
+    function loadPlayerName() {
+      const saved = localStorage.getItem(STORAGE_KEY);
+
+      if (!saved) return;
+
+      try {
+        const user = JSON.parse(saved);
+        document.getElementById("playerName").innerHTML = (user.displayName || user.username || "Player") + "<br>(you)";
+      } catch (err) {}
+    }
+
+    function renderText(value) {
+      target.innerHTML = "";
+
+      for (let i = 0; i < text.length; i++) {
+        const span = document.createElement("span");
+        span.classList.add("char");
+
+        if (i < value.length) {
+          if (value[i] === text[i]) {
+            span.classList.add("correct");
+          } else {
+            span.classList.add("wrong");
+          }
+        } else if (i === correctIndex) {
+          span.classList.add("current");
+        }
+
+        span.textContent = text[i];
+        target.appendChild(span);
+      }
+    }
+
+    function startCountdown() {
+      if (countdownRunning || started || finished) return;
+
+      countdownRunning = true;
+      document.getElementById("startBtn").disabled = true;
+      document.getElementById("readyText").textContent = "Bersiap...";
+      document.getElementById("raceTitle").textContent = "The race is about to start!";
+      document.getElementById("redLight").classList.remove("active");
+      document.getElementById("yellowLight").classList.remove("active");
+      document.getElementById("greenLight").classList.remove("active");
+
+      let time = 7;
+      document.getElementById("countNumber").textContent = ":" + String(time).padStart(2, "0");
+
+      const timer = setInterval(() => {
+        time--;
+        document.getElementById("countNumber").textContent = ":" + String(time).padStart(2, "0");
+
+        if (time === 5) {
+          document.getElementById("redLight").classList.add("active");
+          document.getElementById("readyText").textContent = "Bersiap...";
+        }
+
+        if (time === 3) {
+          document.getElementById("yellowLight").classList.add("active");
+          document.getElementById("readyText").textContent = "Siap...";
+        }
+
+        if (time === 0) {
+          document.getElementById("greenLight").classList.add("active");
+          document.getElementById("readyText").textContent = "GO!";
+          document.getElementById("raceTitle").textContent = "Race started!";
+          clearInterval(timer);
+          startRace();
+        }
+      }, 1000);
+    }
+
+    function startRace() {
+      started = true;
+      countdownRunning = false;
+      startTime = Date.now();
+
+      input.disabled = false;
+      input.focus();
+
+      startBots();
+    }
+
+    input.addEventListener("input", () => {
+      if (!started || finished) return;
+
+      const value = input.value;
+
+      if (!text.startsWith(value)) {
+        wrongCount++;
+        input.value = lastValue;
+        renderText(lastValue);
+        return;
+      }
+
+      lastValue = value;
+      correctIndex = value.length;
+
+      renderText(value);
+      updatePlayerProgress();
+
+      if (value === text) {
+        finishRace("player");
+      }
+    });
+
+    function updatePlayerProgress() {
+      const progress = correctIndex / text.length;
+      const maxMove = 760;
+      const left = 135 + progress * maxMove;
+
+      playerCar.style.left = left + "px";
+
+      const elapsed = Math.max((Date.now() - startTime) / 1000, 1);
+      const cpm = Math.round((correctIndex / elapsed) * 60);
+      document.getElementById("speedLine").textContent = cpm + " cpm";
+    }
+
+    function startBots() {
+      let botProgress1 = 0;
+      let botProgress2 = 0;
+
+      const speed1 = 0.75 + Math.random() * 0.35;
+      const speed2 = 0.55 + Math.random() * 0.25;
+
+      botInterval = setInterval(() => {
+        if (finished) {
+          clearInterval(botInterval);
+          return;
+        }
+
+        botProgress1 += speed1;
+        botProgress2 += speed2;
+
+        bot1.style.left = (135 + botProgress1) + "px";
+        bot2.style.left = (135 + botProgress2) + "px";
+
+        if (botProgress1 >= 760 && !finishOrder.includes("Bot Cepat")) {
+          finishOrder.push("Bot Cepat");
+        }
+
+        if (botProgress2 >= 760 && !finishOrder.includes("Bot Santai")) {
+          finishOrder.push("Bot Santai");
+        }
+
+        if (botProgress1 >= 760 && botProgress2 >= 760) {
+          finishRace("bot");
+        }
+      }, 50);
+    }
+
+    function finishRace(winner) {
+      if (finished) return;
+
+      finished = true;
+      endTime = Date.now();
+
+      clearInterval(botInterval);
+      input.disabled = true;
+
+      if (!finishOrder.includes("Player")) {
+        finishOrder.push("Player");
+      }
+
+      const durationMinutes = Math.max((endTime - startTime) / 60000, 0.01);
+      const wpm = Math.round((correctIndex / 5) / durationMinutes);
+      const accuracy = Math.max(0, Math.round(((text.length - wrongCount) / text.length) * 100));
+
+      let position = finishOrder.indexOf("Player") + 1;
+      if (position <= 0) position = 3;
+
+      const bonusPosition = position === 1 ? 50 : position === 2 ? 25 : 10;
+      const exp = Math.floor(wpm + accuracy / 2 + bonusPosition);
+
+      document.getElementById("resultWpm").textContent = wpm;
+      document.getElementById("resultAccuracy").textContent = accuracy + "%";
+      document.getElementById("resultPosition").textContent = position;
+      document.getElementById("resultExp").textContent = exp;
+      document.getElementById("resultBox").style.display = "block";
+      document.getElementById("raceTitle").textContent = "Race Finished!";
+      document.getElementById("readyText").textContent = winner === "player" ? "Kamu finish!" : "Bot finish duluan!";
+    }
+
+    function resetCars() {
+      playerCar.style.left = "135px";
+      bot1.style.left = "135px";
+      bot2.style.left = "135px";
+    }
+
+    function goBack() {
+      window.location.href = "index.html";
+    }
+  </script>
+</body>
+</html>
