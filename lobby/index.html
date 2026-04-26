@@ -373,12 +373,12 @@
         <div class="stats">
           <div class="stat-box">
             <strong id="bestWpm">0</strong>
-            <span>Best WPM</span>
+            <span>Level</span>
           </div>
 
           <div class="stat-box">
             <strong id="totalPlay">0</strong>
-            <span>Total Main</span>
+            <span>EXP</span>
           </div>
 
           <div class="stat-box">
@@ -430,7 +430,6 @@
     </div>
   </div>
 
-  <!-- MODAL LOGIN / REGISTER -->
   <div class="modal-overlay" id="loginModal">
     <div class="modal">
       <h2>Akun Pemain</h2>
@@ -445,33 +444,33 @@
         <input type="password" id="loginPassword" placeholder="Password" />
 
         <div class="modal-actions">
-          <button class="btn" style="flex:1;" onclick="fakeLogin()">Login</button>
+          <button class="btn" style="flex:1;" onclick="loginUser()">Login</button>
           <button class="btn btn-danger" style="flex:1;" onclick="closeLoginModal()">Tutup</button>
         </div>
 
-        <p class="notice">
-          Untuk sekarang login masih dummy. Nanti akan dicek ke Sheet USERS lewat GAS.
+        <p class="notice" id="loginNotice">
+          Login akan dicek langsung ke Sheet USERS lewat GAS.
         </p>
       </div>
 
       <div class="form" id="registerForm">
         <input type="text" id="regUsername" placeholder="Username" />
-        <input type="text" id="regDisplayName" placeholder="Nama Tampilan" />
         <input type="password" id="regPassword" placeholder="Password" />
 
         <div class="modal-actions">
-          <button class="btn" style="flex:1;" onclick="fakeRegister()">Register</button>
+          <button class="btn" style="flex:1;" onclick="registerUser()">Register</button>
           <button class="btn btn-danger" style="flex:1;" onclick="closeLoginModal()">Tutup</button>
         </div>
 
-        <p class="notice">
-          Nanti register akan menyimpan username, password hash, display name, dan tanggal daftar ke Sheets.
+        <p class="notice" id="registerNotice">
+          Register akan menyimpan username dan password ke Sheet USERS lewat GAS.
         </p>
       </div>
     </div>
   </div>
 
   <script>
+    const GAS_URL = "https://script.google.com/macros/s/AKfycbw9HKETK1cNd6Mw1IDkwmjn4zABqnUgj-iDBhNE09z09H2HUfl6CF1qkGfskjS9ufJL/exec";
     const STORAGE_KEY = "typingRaceUser";
 
     document.addEventListener("DOMContentLoaded", () => {
@@ -488,21 +487,27 @@
           type: "guest",
           username: "Guest_" + guestNumber,
           displayName: "Guest_" + guestNumber,
-          bestWpm: 0,
-          totalPlay: 0
+          level: 1,
+          exp: 0,
+          selectedSkin: "default"
         };
 
         localStorage.setItem(STORAGE_KEY, JSON.stringify(guestUser));
         savedUser = JSON.stringify(guestUser);
       }
 
-      updateUserUI(JSON.parse(savedUser));
+      const user = JSON.parse(savedUser);
+      updateUserUI(user);
+
+      if (user.type === "user") {
+        loadProfile(user.username);
+      }
     }
 
     function updateUserUI(user) {
-      document.getElementById("userDisplay").textContent = user.displayName;
-      document.getElementById("bestWpm").textContent = user.bestWpm || 0;
-      document.getElementById("totalPlay").textContent = user.totalPlay || 0;
+      document.getElementById("userDisplay").textContent = user.displayName || user.username;
+      document.getElementById("bestWpm").textContent = user.level || 1;
+      document.getElementById("totalPlay").textContent = user.exp || 0;
       document.getElementById("accountType").textContent = user.type === "guest" ? "Guest" : "User";
 
       if (user.type === "guest") {
@@ -541,53 +546,110 @@
       }
     }
 
-    function fakeLogin() {
-      const username = document.getElementById("loginUsername").value.trim();
-      const password = document.getElementById("loginPassword").value.trim();
+    async function registerUser() {
+      const username = document.getElementById("regUsername").value.trim();
+      const password = document.getElementById("regPassword").value.trim();
+      const notice = document.getElementById("registerNotice");
 
       if (!username || !password) {
-        alert("Username dan password wajib diisi.");
+        notice.textContent = "Username dan password wajib diisi.";
         return;
       }
 
-      const user = {
-        type: "user",
-        username: username,
-        displayName: username,
-        bestWpm: 0,
-        totalPlay: 0
-      };
+      notice.textContent = "Memproses register...";
 
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(user));
-      updateUserUI(user);
-      closeLoginModal();
+      try {
+        const res = await fetch(GAS_URL + "?action=register&username=" + encodeURIComponent(username) + "&password=" + encodeURIComponent(password));
+        const data = await res.json();
 
-      alert("Login dummy berhasil. Nanti bagian ini akan connect ke GAS.");
+        if (data.status !== "success") {
+          notice.textContent = data.message || "Register gagal.";
+          return;
+        }
+
+        const user = {
+          type: "user",
+          username: data.user.username,
+          displayName: data.user.username,
+          level: data.user.level || 1,
+          exp: data.user.exp || 0,
+          selectedSkin: data.user.selectedSkin || "default",
+          unlockedSkins: data.unlockedSkins || []
+        };
+
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(user));
+        updateUserUI(user);
+        closeLoginModal();
+        alert("Register berhasil.");
+      } catch (err) {
+        notice.textContent = "Gagal connect ke GAS.";
+      }
     }
 
-    function fakeRegister() {
-      const username = document.getElementById("regUsername").value.trim();
-      const displayName = document.getElementById("regDisplayName").value.trim();
-      const password = document.getElementById("regPassword").value.trim();
+    async function loginUser() {
+      const username = document.getElementById("loginUsername").value.trim();
+      const password = document.getElementById("loginPassword").value.trim();
+      const notice = document.getElementById("loginNotice");
 
-      if (!username || !displayName || !password) {
-        alert("Semua data register wajib diisi.");
+      if (!username || !password) {
+        notice.textContent = "Username dan password wajib diisi.";
         return;
       }
 
-      const user = {
-        type: "user",
-        username: username,
-        displayName: displayName,
-        bestWpm: 0,
-        totalPlay: 0
-      };
+      notice.textContent = "Memproses login...";
 
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(user));
-      updateUserUI(user);
-      closeLoginModal();
+      try {
+        const res = await fetch(GAS_URL + "?action=login&username=" + encodeURIComponent(username) + "&password=" + encodeURIComponent(password));
+        const data = await res.json();
 
-      alert("Register dummy berhasil. Nanti data ini akan disimpan ke Sheet USERS.");
+        if (data.status !== "success") {
+          notice.textContent = data.message || "Login gagal.";
+          return;
+        }
+
+        const user = {
+          type: "user",
+          username: data.user.username,
+          displayName: data.user.username,
+          level: data.user.level || 1,
+          exp: data.user.exp || 0,
+          selectedSkin: data.user.selectedSkin || "default",
+          unlockedSkins: data.unlockedSkins || []
+        };
+
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(user));
+        updateUserUI(user);
+        closeLoginModal();
+        alert("Login berhasil.");
+      } catch (err) {
+        notice.textContent = "Gagal connect ke GAS.";
+      }
+    }
+
+    async function loadProfile(username) {
+      try {
+        const res = await fetch(GAS_URL + "?action=getProfile&username=" + encodeURIComponent(username));
+        const data = await res.json();
+
+        if (data.status !== "success") {
+          return;
+        }
+
+        const savedUser = JSON.parse(localStorage.getItem(STORAGE_KEY));
+
+        const user = {
+          type: "user",
+          username: data.user.username,
+          displayName: data.user.username,
+          level: data.user.level || 1,
+          exp: data.user.exp || 0,
+          selectedSkin: data.user.selectedSkin || "default",
+          unlockedSkins: data.unlockedSkins || []
+        };
+
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(user));
+        updateUserUI(user);
+      } catch (err) {}
     }
 
     function logoutUser() {
@@ -600,12 +662,10 @@
 
       alert(
         "Mode: " + mode +
-        "\nPlayer: " + user.displayName +
+        "\nPlayer: " + (user.displayName || user.username) +
+        "\nLevel: " + (user.level || 1) +
         "\n\nNanti tombol ini akan diarahkan ke halaman game."
       );
-
-      // Nanti bisa diganti:
-      // window.location.href = "game.html?mode=" + mode;
     }
 
     function createRoom() {
@@ -621,7 +681,7 @@
 
       const roomData = {
         roomId,
-        host: user.displayName,
+        host: user.displayName || user.username,
         mode,
         createdAt: now.toISOString(),
         expiredAt: expiredAt.toISOString(),
@@ -636,7 +696,7 @@
         <b>Room berhasil dibuat!</b><br>
         Room ID: ${roomId}<br>
         Mode: ${mode}<br>
-        Host: ${user.displayName}<br>
+        Host: ${user.displayName || user.username}<br>
         Expired: ${expiredHour} jam<br><br>
         Link:<br>${roomLink}
       `;
@@ -651,9 +711,6 @@
       }
 
       alert("Join room: " + code + "\n\nNanti akan dicek ke GAS apakah room masih aktif atau expired.");
-
-      // Nanti bisa diganti:
-      // window.location.href = "room.html?id=" + code;
     }
 
     function generateRoomId() {
