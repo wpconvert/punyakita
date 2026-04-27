@@ -222,15 +222,13 @@ async function loadSkins(){
   list.innerHTML="<p style='color:#9db7cc;'>Memuat skin...</p>";
 
   try{
-    const res=await fetch(SKIN_GAS_URL+"?action=skins&t="+Date.now());
+    const res=await fetch(SKIN_GAS_URL + "?t=" + Date.now());
     const data=await res.json();
-
-    console.log("DATA GAS SKIN:", data);
 
     if(data.status==="success" && Array.isArray(data.data)){
       skins=data.data
         .map(normalizeSkin)
-        .filter(s => String(s.status || "ACTIVE").toUpperCase() === "ACTIVE");
+        .filter(s=>String(s.status || "ACTIVE").toUpperCase()==="ACTIVE");
 
       if(!skins.length){
         list.innerHTML="<p style='color:#ff6b8a;'>Skin kosong di GAS.</p>";
@@ -260,26 +258,52 @@ async function loadSkins(){
 }
 
 function normalizeSkin(raw){
-  const obj={};
+  const lower={};
 
   Object.keys(raw || {}).forEach(key=>{
-    obj[String(key).toLowerCase().trim()] = raw[key];
+    lower[String(key).toLowerCase().replace(/\s/g,"").trim()] = raw[key];
   });
 
-  const skinId = String(obj.skinid || raw.skinId || raw.id || "").trim();
-  const skinName = String(obj.skinname || raw.skinName || raw.name || skinId).trim();
-  const type = String(obj.type || raw.type || "").trim();
-  const status = String(obj.status || raw.status || "ACTIVE").trim();
+  const skinId=String(
+    raw.skinId ||
+    raw.id ||
+    lower.skinid ||
+    lower.id ||
+    ""
+  ).trim();
 
-  let imageUrl = String(
-    obj.imageurl ||
-    obj.image ||
-    obj.img ||
-    obj.url ||
-    obj.value ||
+  const skinName=String(
+    raw.skinName ||
+    raw.name ||
+    lower.skinname ||
+    lower.name ||
+    skinId
+  ).trim();
+
+  const type=String(
+    raw.type ||
+    lower.type ||
+    ""
+  ).trim();
+
+  const status=String(
+    raw.status ||
+    lower.status ||
+    "ACTIVE"
+  ).trim();
+
+  let imageUrl=String(
     raw.imageUrl ||
+    raw.imageurl ||
     raw.image ||
+    raw.img ||
+    raw.url ||
     raw.value ||
+    lower.imageurl ||
+    lower.image ||
+    lower.img ||
+    lower.url ||
+    lower.value ||
     ""
   ).trim();
 
@@ -292,26 +316,27 @@ function normalizeSkin(raw){
     });
   }
 
-  let unlockLevel = Number(
-    obj.unlocklevel ||
-    obj.level ||
+  let unlockLevel=Number(
     raw.unlockLevel ||
+    raw.unlocklevel ||
     raw.level ||
+    lower.unlocklevel ||
+    lower.level ||
     ""
   );
 
   if(!unlockLevel || isNaN(unlockLevel)){
-    const levelMatch = type.match(/\d+/);
-    unlockLevel = levelMatch ? Number(levelMatch[0]) : 1;
+    const match=type.match(/\d+/);
+    unlockLevel=match ? Number(match[0]) : 1;
   }
 
   return {
-    skinId,
-    skinName,
-    type,
-    imageUrl,
-    unlockLevel,
-    status
+    skinId: skinId,
+    skinName: skinName,
+    type: type,
+    imageUrl: imageUrl,
+    unlockLevel: unlockLevel,
+    status: status
   };
 }
 
@@ -385,8 +410,10 @@ function renderPreview(){
 }
 
 function renderSkin(s){
-  if(s.imageUrl){
-    return `<img src="${s.imageUrl}" alt="" onerror="this.outerHTML='🏎'">`;
+  const url=String(s.imageUrl || "").trim();
+
+  if(url){
+    return `<img src="${url}" alt="${escapeHtml(s.skinName || s.skinId)}" onerror="this.outerHTML='🏎'">`;
   }
 
   return "🏎";
