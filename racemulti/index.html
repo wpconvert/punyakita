@@ -1,0 +1,905 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TypeRace Multiplayer</title>
+
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: Arial, sans-serif; }
+
+    body {
+      min-height: 100vh;
+      background:
+        radial-gradient(circle at top left, rgba(0, 255, 255, 0.14), transparent 35%),
+        radial-gradient(circle at bottom right, rgba(0, 110, 255, 0.18), transparent 35%),
+        #07111f;
+      padding: 18px;
+      color: #111827;
+      overflow-x: auto;
+    }
+
+    .app {
+      width: 1380px;
+      min-width: 1380px;
+      background: #f8fbff;
+      border: 1px solid #c7d9ea;
+      border-radius: 10px;
+      padding: 22px;
+      box-shadow: 0 0 28px rgba(0, 174, 255, 0.15);
+    }
+
+    .title { color: #2f55a4; font-size: 22px; font-weight: bold; margin-bottom: 12px; }
+    .room-info { margin-bottom: 12px; color: #4c7c8e; font-size: 14px; font-weight: bold; }
+    .room-info span { color: #2f55a4; }
+
+    .start-panel {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 16px;
+      background: #eef7fd;
+      border: 1px solid #bdd6e7;
+      border-radius: 9px;
+      padding: 12px 14px;
+      width: fit-content;
+    }
+
+    .light-box { display: flex; align-items: center; gap: 8px; background: #111; padding: 7px 10px; border-radius: 8px; }
+    .light { width: 30px; height: 30px; border-radius: 50%; background: #1d1d1d; border: 3px solid #444; box-shadow: inset -5px -5px 9px rgba(0,0,0,0.45); }
+    .light.red.active { background: #ff3b4f; box-shadow: 0 0 12px rgba(255, 59, 79, 0.9); }
+    .light.yellow.active { background: #ffd23c; box-shadow: 0 0 12px rgba(255, 210, 60, 0.9); }
+    .light.green.active { background: #38e87d; box-shadow: 0 0 12px rgba(56, 232, 125, 0.9); }
+
+    .ready-text { color: #2f55a4; font-size: 17px; font-weight: bold; min-width: 280px; }
+    .count-number { color: #111; font-size: 28px; font-family: monospace; font-weight: bold; min-width: 52px; text-align: right; }
+
+    .start-btn, .ready-btn, .join-btn, .leave-btn, .copy-btn {
+      padding: 11px 18px;
+      border: none;
+      border-radius: 8px;
+      color: white;
+      font-size: 15px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    .start-btn { background: #238bd6; }
+    .start-btn:hover { background: #1576bb; }
+    .start-btn:disabled { opacity: 0.55; cursor: not-allowed; }
+
+    .ready-btn { background: #21b96f; }
+    .ready-btn.not-ready { background: #ff4d6d; }
+    .ready-btn:disabled { opacity: 0.55; cursor: not-allowed; }
+
+    .join-btn { background: #21b96f; }
+    .leave-btn { background: #ff4d6d; }
+    .copy-btn { background: #6b7cff; }
+
+    .race-top { margin-bottom: 12px; }
+
+    .lane {
+      position: relative;
+      height: 62px;
+      border-bottom: 2px dashed #f0b629;
+      overflow: hidden;
+    }
+
+    .lane-name {
+      position: absolute;
+      left: 0;
+      top: 8px;
+      width: 125px;
+      text-align: right;
+      padding-right: 12px;
+      color: #4c7c8e;
+      font-size: 15px;
+      font-weight: bold;
+      line-height: 1.2;
+    }
+
+    .ready-icon {
+      position: absolute;
+      left: 140px;
+      top: 18px;
+      width: 28px;
+      font-size: 22px;
+      text-align: center;
+      z-index: 3;
+    }
+
+    .car {
+      position: absolute;
+      left: 175px;
+      top: 8px;
+      font-size: 38px;
+      transition: left 0.12s linear;
+      filter: drop-shadow(0 2px 2px rgba(0,0,0,0.2));
+      z-index: 2;
+    }
+
+    .finish-line {
+      position: absolute;
+      right: 70px;
+      top: 5px;
+      bottom: 5px;
+      width: 4px;
+      background: #ff2525;
+      z-index: 1;
+    }
+
+    .lane-position {
+      position: absolute;
+      right: 10px;
+      top: 20px;
+      width: 50px;
+      text-align: left;
+      font-size: 15px;
+      font-weight: bold;
+      color: #111;
+    }
+
+    .speed-line { text-align: right; color: #5f7889; font-size: 14px; margin-bottom: 14px; }
+
+    .typing-panel {
+      background: #eef7fd;
+      border: 1px solid #bdd6e7;
+      border-radius: 9px;
+      padding: 18px;
+      margin-bottom: 22px;
+    }
+
+    .target-text {
+      font-size: 22px;
+      line-height: 1.5;
+      font-family: "Courier New", monospace;
+      color: #000;
+      margin-bottom: 18px;
+      white-space: pre-wrap;
+      min-height: 96px;
+    }
+
+    .target-placeholder { color: #7b91a3; font-family: Arial, sans-serif; font-size: 17px; }
+    .char { color: #000; display: inline; }
+    .char.correct { color: #18a558; }
+    .char.wrong { color: #ffffff; background: #ff0000; border-radius: 2px; }
+    .char.current { color: #000; background: #d9ecff; border-radius: 3px; }
+
+    .input-box {
+      width: 100%;
+      padding: 10px 12px;
+      font-family: "Courier New", monospace;
+      font-size: 22px;
+      border: 1px solid #b7c7d9;
+      background: white;
+      color: #111;
+      outline: none;
+    }
+
+    .input-box:focus { border-color: #4aa8ff; box-shadow: 0 0 0 3px rgba(74, 168, 255, 0.18); }
+
+    .menu-btn {
+      padding: 17px 28px;
+      background: #ffb21c;
+      border: none;
+      border-radius: 7px;
+      color: white;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+      min-width: 260px;
+    }
+
+    .menu-btn:hover { background: #ff9900; }
+
+    .result {
+      display: none;
+      margin-top: 18px;
+      background: #fff;
+      border: 1px solid #bdd6e7;
+      border-radius: 9px;
+      padding: 18px;
+    }
+
+    .result h2 { color: #2f55a4; margin-bottom: 14px; }
+    .result-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+
+    .stat-box {
+      border: 1px solid #d4e2ee;
+      border-radius: 8px;
+      padding: 14px;
+      text-align: center;
+      background: #f2f8fc;
+    }
+
+    .stat-box strong { display: block; color: #2f55a4; font-size: 26px; margin-bottom: 4px; }
+    .stat-box span { color: #607789; font-size: 13px; }
+  </style>
+</head>
+
+<body>
+  <div class="app">
+    <div class="title" id="raceTitle">The race is about to start!</div>
+
+    <div class="room-info">
+      Room ID: <span id="roomIdText">-</span> | Link: <span id="roomLinkText">-</span>
+    </div>
+
+    <div class="start-panel">
+      <button class="join-btn" id="joinBtn" onclick="joinAsPlayer()">JOIN</button>
+      <button class="leave-btn" id="leaveBtn" onclick="leaveRoom()" style="display:none;">LEAVE</button>
+      <button class="ready-btn not-ready" id="readyBtn" onclick="toggleReady()" style="display:none;">Ready</button>
+      <button class="start-btn" id="startBtn" onclick="startCountdown()" disabled>Start Race</button>
+      <button class="copy-btn" onclick="copyRoomLink()">Copy Link</button>
+
+      <div class="light-box">
+        <div class="light red" id="redLight"></div>
+        <div class="light yellow" id="yellowLight"></div>
+        <div class="light green" id="greenLight"></div>
+      </div>
+
+      <div class="ready-text" id="readyText">Menunggu pemain ready...</div>
+      <div class="count-number" id="countNumber">:07</div>
+    </div>
+
+    <div class="race-top" id="lanes"></div>
+
+    <div class="speed-line" id="speedLine">0 cpm</div>
+
+    <div class="typing-panel">
+      <div class="target-text" id="targetText">
+        <span class="target-placeholder">Teks akan muncul saat hitungan mundur dimulai.</span>
+      </div>
+      <input
+        class="input-box"
+        id="typingInput"
+        placeholder="Type the above text here when the race begins"
+        disabled
+        autocomplete="off"
+      />
+    </div>
+
+    <button class="menu-btn" onclick="goBack()">Main menu (leave race)</button>
+
+    <div class="result" id="resultBox">
+      <h2>Hasil Race</h2>
+
+      <div class="result-grid">
+        <div class="stat-box"><strong id="resultWpm">0</strong><span>WPM</span></div>
+        <div class="stat-box"><strong id="resultAccuracy">0%</strong><span>Akurasi</span></div>
+        <div class="stat-box"><strong id="resultPosition">-</strong><span>Posisi</span></div>
+        <div class="stat-box"><strong id="resultExp">0</strong><span>EXP</span></div>
+      </div>
+    </div>
+      </div>
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyBsl2mWDEInWhmNkAKGsTERUladGCjv3nM",
+      authDomain: "punyakita-balap.firebaseapp.com",
+      databaseURL: "https://punyakita-balap-default-rtdb.asia-southeast1.firebasedatabase.app",
+      projectId: "punyakita-balap",
+      storageBucket: "punyakita-balap.firebasestorage.app",
+      messagingSenderId: "1097211821719",
+      appId: "1:1097211821719:web:e76a9313edc2e42498f3d2"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    const STORAGE_KEY = "typingRaceUser";
+    const PLAYER_ID_KEY = "typingRacePlayerId";
+
+    const texts = [
+      "Siapa takut menjadi perawan tua? Hari gini, menikah bukan lagi sekedar institusi romantis nggak jelas. Menikah adalah kerjasama dua pihak yang menguntungkan.",
+      "Aku bukan orang yang lemah. Kalau aku lemah, sudah kubersembunyi di dasar lemah. Namun aku orang yang kuat. Dengan dagu terangkat, menggenggam kejujuran erat erat.",
+      "Aku percaya bahwa usaha yang dilakukan dengan sungguh sungguh akan membawa hasil yang baik.",
+      "Jangan menyerah hanya karena perjalanan terasa sulit, sebab setiap langkah kecil tetap berarti.",
+      "Kecepatan mengetik yang baik datang dari latihan, fokus, dan kebiasaan membaca teks dengan teliti.",
+      "Permainan ini dibuat untuk melatih ketepatan, kecepatan, dan konsentrasi saat mengetik."
+    ];
+
+    let roomId = getRoomId();
+    let playerId = getPlayerId();
+    let playerDisplayName = getPlayerName();
+    let text = "";
+    let correctIndex = 0;
+    let started = false;
+    let finished = false;
+    let countdownRunning = false;
+    let startTime = null;
+    let endTime = null;
+    let wrongCount = 0;
+    let currentRoomData = null;
+    let isReady = false;
+    let isHost = false;
+    let hasJoined = false;
+    let currentPlayers = {};
+    let resetTimer = null;
+
+    const trackStart = 175;
+    const maxMove = 1040;
+
+    const target = document.getElementById("targetText");
+    const input = document.getElementById("typingInput");
+    const lanes = document.getElementById("lanes");
+
+    const roomRef = db.ref("rooms/" + roomId);
+    const playersRef = roomRef.child("players");
+    const myPlayerRef = playersRef.child(playerId);
+
+    input.addEventListener("paste", (e) => e.preventDefault());
+    input.addEventListener("drop", (e) => e.preventDefault());
+
+    document.addEventListener("DOMContentLoaded", () => {
+      document.getElementById("roomIdText").textContent = roomId;
+      document.getElementById("roomLinkText").textContent = window.location.href;
+      setupRoom();
+      listenRoom();
+      renderTextPlaceholder();
+    });
+
+    function getRoomId() {
+      const params = new URLSearchParams(window.location.search);
+      let id = params.get("room");
+
+      if (!id) {
+        id = generateRoomId();
+        const url = new URL(window.location.href);
+        url.searchParams.set("room", id);
+        window.history.replaceState(null, "", url.toString());
+      }
+
+      return id.toUpperCase();
+    }
+
+    function getPlayerId() {
+      let id = localStorage.getItem(PLAYER_ID_KEY);
+
+      if (!id) {
+        id = "P" + Date.now() + Math.floor(Math.random() * 9999);
+        localStorage.setItem(PLAYER_ID_KEY, id);
+      }
+
+      return id;
+    }
+
+    function getPlayerName() {
+      const saved = localStorage.getItem(STORAGE_KEY);
+
+      if (!saved) return "Guest_" + Math.floor(10000 + Math.random() * 90000);
+
+      try {
+        const user = JSON.parse(saved);
+        return user.displayName || user.username || "Guest";
+      } catch (err) {
+        return "Guest";
+      }
+    }
+
+    function setupRoom() {
+      roomRef.once("value").then((snap) => {
+        const now = Date.now();
+
+        if (!snap.exists() || (snap.val().expiresAt && now > snap.val().expiresAt)) {
+          roomRef.set({
+            roomId: roomId,
+            hostId: playerId,
+            status: "waiting",
+            text: "",
+            createdAt: now,
+            expiresAt: now + 60 * 60 * 1000,
+            countdownStartAt: 0,
+            startAt: 0,
+            finishCount: 0,
+            resetAt: 0
+          }).then(() => {
+            joinAsHost();
+          });
+        }
+      });
+    }
+
+    function joinAsHost() {
+      hasJoined = true;
+      isHost = true;
+
+      myPlayerRef.set({
+        id: playerId,
+        name: playerDisplayName,
+        progress: 0,
+        correctIndex: 0,
+        cpm: 0,
+        ready: false,
+        status: "waiting",
+        position: "",
+        joinedAt: Date.now()
+      });
+
+      myPlayerRef.onDisconnect().remove();
+    }
+
+    function joinAsPlayer() {
+      if (!currentRoomData) return;
+      if (currentRoomData.status === "racing" || currentRoomData.status === "countdown" || currentRoomData.status === "resetting") return;
+
+      hasJoined = true;
+
+      myPlayerRef.set({
+        id: playerId,
+        name: playerDisplayName,
+        progress: 0,
+        correctIndex: 0,
+        cpm: 0,
+        ready: false,
+        status: "waiting",
+        position: "",
+        joinedAt: Date.now()
+      });
+
+      myPlayerRef.onDisconnect().remove();
+    }
+
+    function leaveRoom() {
+      myPlayerRef.remove().then(() => {
+        window.location.href = "index.html";
+      });
+    }
+
+    function listenRoom() {
+      roomRef.on("value", (snap) => {
+        const data = snap.val();
+        if (!data) return;
+
+        currentRoomData = data;
+        currentPlayers = data.players || {};
+        hasJoined = !!currentPlayers[playerId];
+        isHost = data.hostId === playerId;
+        text = data.text || "";
+
+        if (data.expiresAt && Date.now() > data.expiresAt) {
+          document.getElementById("readyText").textContent = "Room sudah expired.";
+          document.getElementById("startBtn").disabled = true;
+          document.getElementById("readyBtn").style.display = "none";
+          document.getElementById("joinBtn").style.display = "none";
+          input.disabled = true;
+          return;
+        }
+
+        if (isHost && !hasJoined && data.status === "waiting") {
+          joinAsHost();
+          return;
+        }
+
+        renderPlayers(currentPlayers);
+        updateButtons();
+        updateRoomStatus(data);
+      });
+    }
+
+    function updateButtons() {
+      const status = currentRoomData ? currentRoomData.status : "waiting";
+      const me = currentPlayers[playerId];
+
+      isReady = !!(me && me.ready);
+
+      document.getElementById("joinBtn").style.display = !hasJoined && (status === "waiting" || status === "finished") ? "inline-block" : "none";
+      document.getElementById("leaveBtn").style.display = hasJoined ? "inline-block" : "none";
+      document.getElementById("readyBtn").style.display = hasJoined && status === "waiting" ? "inline-block" : "none";
+
+      const readyBtn = document.getElementById("readyBtn");
+      readyBtn.textContent = isReady ? "Ready ✓" : "Ready";
+      readyBtn.classList.toggle("not-ready", !isReady);
+
+      updateStartButton();
+    }
+
+    function updateStartButton() {
+      const btn = document.getElementById("startBtn");
+      const list = Object.values(currentPlayers);
+      const allReady = list.length > 0 && list.every((p) => p.ready);
+
+      if (!isHost) {
+        btn.disabled = true;
+        btn.textContent = "Host Only";
+        return;
+      }
+
+      btn.textContent = "Start Race";
+
+      if (!currentRoomData || currentRoomData.status !== "waiting") {
+        btn.disabled = true;
+        return;
+      }
+
+      btn.disabled = !allReady;
+    }
+
+    function updateRoomStatus(data) {
+      if (data.status === "waiting") {
+        started = false;
+        finished = false;
+        correctIndex = 0;
+        wrongCount = 0;
+        input.value = "";
+        input.disabled = true;
+        document.getElementById("resultBox").style.display = "none";
+        document.getElementById("raceTitle").textContent = "The race is about to start!";
+        document.getElementById("countNumber").textContent = ":07";
+        document.getElementById("redLight").classList.remove("active");
+        document.getElementById("yellowLight").classList.remove("active");
+        document.getElementById("greenLight").classList.remove("active");
+        renderTextPlaceholder();
+        updateWaitingText();
+        return;
+      }
+
+      if (data.status === "countdown") {
+        if (data.text) {
+          text = data.text;
+          renderText(input.value || "");
+        }
+        runRemoteCountdown(data);
+        return;
+      }
+
+      if (data.status === "racing") {
+        if (data.text) {
+          text = data.text;
+          renderText(input.value || "");
+        }
+
+        if (hasJoined && !started) {
+          started = true;
+          startTime = data.startAt || Date.now();
+          input.disabled = false;
+          input.focus();
+          document.getElementById("readyText").textContent = "GO!";
+          document.getElementById("raceTitle").textContent = "Race started!";
+          document.getElementById("greenLight").classList.add("active");
+        }
+
+        if (!hasJoined) {
+          document.getElementById("readyText").textContent = "Sedang racing, kamu menonton dulu.";
+          input.disabled = true;
+        }
+      }
+
+      if (data.status === "resetting") {
+        input.disabled = true;
+        runResetCountdown(data);
+      }
+
+      if (data.status === "finished") {
+        input.disabled = true;
+        document.getElementById("readyText").textContent = "Race selesai. Player baru boleh join.";
+      }
+    }
+
+    function updateWaitingText() {
+      const list = Object.values(currentPlayers);
+      const readyCount = list.filter((p) => p.ready).length;
+      const total = list.length;
+
+      if (total === 0) {
+        document.getElementById("readyText").textContent = "Belum ada player.";
+        return;
+      }
+
+      if (readyCount === total) {
+        document.getElementById("readyText").textContent = isHost ? "Semua ready, host bisa mulai." : "Menunggu host mulai.";
+      } else {
+        document.getElementById("readyText").textContent = readyCount + "/" + total + " player ready";
+      }
+    }
+
+    function renderPlayers(players) {
+      const playerList = Object.values(players).sort((a, b) => Number(a.joinedAt || 0) - Number(b.joinedAt || 0));
+      lanes.innerHTML = "";
+
+      playerList.forEach((player) => {
+        const lane = document.createElement("div");
+        lane.className = "lane";
+        const readyIcon = player.ready ? "✅" : "❌";
+        const progress = Number(player.progress || 0);
+        const left = trackStart + progress * maxMove;
+
+        lane.innerHTML = `
+          <div class="lane-name">${escapeHtml(player.name || "Player")}<br>${player.id === playerId ? "(you)" : "(player)"}</div>
+          <div class="ready-icon">${readyIcon}</div>
+          <div class="car" style="left:${left}px;">${player.id === playerId ? "🏎️" : "🚗"}</div>
+          <div class="finish-line"></div>
+          <div class="lane-position">${player.position || ""}</div>
+        `;
+
+        lanes.appendChild(lane);
+      });
+    }
+
+    function toggleReady() {
+      if (!hasJoined || !currentRoomData || currentRoomData.status !== "waiting") return;
+
+      myPlayerRef.update({
+        ready: !isReady,
+        status: !isReady ? "ready" : "waiting"
+      });
+    }
+
+    function startCountdown() {
+      if (!currentRoomData || !isHost || currentRoomData.status !== "waiting") return;
+
+      const list = Object.values(currentPlayers);
+      const allReady = list.length > 0 && list.every((p) => p.ready);
+
+      if (!allReady) {
+        document.getElementById("readyText").textContent = "Semua player harus ready dulu.";
+        return;
+      }
+
+      const selectedText = texts[Math.floor(Math.random() * texts.length)];
+      const startAt = Date.now() + 7000;
+
+      roomRef.update({
+        status: "countdown",
+        text: selectedText,
+        countdownStartAt: Date.now(),
+        startAt: startAt,
+        finishCount: 0,
+        resetAt: 0
+      });
+
+      Object.keys(currentPlayers).forEach((id) => {
+        playersRef.child(id).update({
+          progress: 0,
+          correctIndex: 0,
+          cpm: 0,
+          ready: false,
+          status: "countdown",
+          position: ""
+        });
+      });
+    }
+
+    function runRemoteCountdown(data) {
+      if (countdownRunning) return;
+
+      countdownRunning = true;
+      document.getElementById("startBtn").disabled = true;
+      document.getElementById("readyBtn").style.display = "none";
+      document.getElementById("joinBtn").style.display = "none";
+
+      const countdownTimer = setInterval(() => {
+        const now = Date.now();
+        const startAt = Number(data.startAt || 0);
+        const diff = Math.max(0, Math.ceil((startAt - now) / 1000));
+
+        document.getElementById("countNumber").textContent = ":" + String(diff).padStart(2, "0");
+        document.getElementById("readyText").textContent = "Bersiap...";
+
+        if (diff <= 5) document.getElementById("redLight").classList.add("active");
+        if (diff <= 3) {
+          document.getElementById("yellowLight").classList.add("active");
+          document.getElementById("readyText").textContent = "Siap...";
+        }
+
+        if (diff <= 0) {
+          clearInterval(countdownTimer);
+          countdownRunning = false;
+
+          if (isHost) {
+            roomRef.update({ status: "racing" });
+          }
+        }
+      }, 250);
+    }
+
+    input.addEventListener("input", () => {
+      if (!started || finished || !hasJoined) return;
+
+      const value = input.value;
+      const prefixLength = getCorrectPrefixLength(value);
+      const hasError = hasTypingError(value);
+
+      if (hasError) wrongCount++;
+
+      correctIndex = prefixLength;
+      renderText(value);
+      updatePlayerProgress();
+
+      if (value === text) finishRace();
+    });
+
+    function renderTextPlaceholder() {
+      target.innerHTML = '<span class="target-placeholder">Teks akan muncul saat hitungan mundur dimulai.</span>';
+    }
+
+    function renderText(value) {
+      if (!text) {
+        renderTextPlaceholder();
+        return;
+      }
+
+      target.innerHTML = "";
+
+      for (let i = 0; i < text.length; i++) {
+        const span = document.createElement("span");
+        span.classList.add("char");
+
+        if (i < value.length) {
+          if (value[i] === text[i]) span.classList.add("correct");
+          else span.classList.add("wrong");
+        } else if (i === correctIndex) {
+          span.classList.add("current");
+        }
+
+        span.textContent = text[i] || " ";
+        target.appendChild(span);
+      }
+    }
+
+    function getCorrectPrefixLength(value) {
+      let count = 0;
+
+      for (let i = 0; i < value.length; i++) {
+        if (value[i] === text[i]) count++;
+        else break;
+      }
+
+      return count;
+    }
+
+    function hasTypingError(value) {
+      for (let i = 0; i < value.length; i++) {
+        if (value[i] !== text[i]) return true;
+      }
+
+      return false;
+    }
+
+    function updatePlayerProgress() {
+      const progress = correctIndex / text.length;
+      const elapsed = Math.max((Date.now() - startTime) / 1000, 1);
+      const cpm = Math.round((correctIndex / elapsed) * 60);
+
+      document.getElementById("speedLine").textContent = cpm + " cpm";
+
+      myPlayerRef.update({
+        progress: progress,
+        correctIndex: correctIndex,
+        cpm: cpm,
+        status: "racing",
+        updatedAt: Date.now()
+      });
+    }
+
+    function finishRace() {
+      if (finished) return;
+
+      finished = true;
+      endTime = Date.now();
+      input.disabled = true;
+
+      roomRef.child("finishCount").transaction((current) => (current || 0) + 1, (error, committed, snapshot) => {
+        const position = snapshot.val();
+
+        myPlayerRef.update({
+          progress: 1,
+          correctIndex: text.length,
+          status: "finished",
+          position: getPositionText(position),
+          finishedAt: Date.now()
+        });
+
+        showResult(position);
+        checkAllFinished();
+      });
+    }
+
+    function showResult(position) {
+      const durationMinutes = Math.max((endTime - startTime) / 60000, 0.01);
+      const wpm = Math.round((correctIndex / 5) / durationMinutes);
+      const accuracy = Math.max(0, Math.round(((text.length - wrongCount) / text.length) * 100));
+      const bonusPosition = position === 1 ? 50 : position === 2 ? 25 : 10;
+      const exp = Math.floor(wpm + accuracy / 2 + bonusPosition);
+
+      document.getElementById("resultWpm").textContent = wpm;
+      document.getElementById("resultAccuracy").textContent = accuracy + "%";
+      document.getElementById("resultPosition").textContent = getPositionText(position);
+      document.getElementById("resultExp").textContent = exp;
+      document.getElementById("resultBox").style.display = "block";
+      document.getElementById("raceTitle").textContent = "Race Finished!";
+      document.getElementById("readyText").textContent = "Kamu finish!";
+    }
+
+    function checkAllFinished() {
+      playersRef.once("value").then((snap) => {
+        const players = snap.val() || {};
+        const list = Object.values(players);
+
+        if (list.length > 0 && list.every((p) => p.status === "finished")) {
+          const resetAt = Date.now() + 10000;
+
+          roomRef.update({
+            status: "resetting",
+            resetAt: resetAt
+          });
+        }
+      });
+    }
+
+    function runResetCountdown(data) {
+      if (resetTimer) return;
+
+      resetTimer = setInterval(() => {
+        const diff = Math.max(0, Math.ceil((Number(data.resetAt || 0) - Date.now()) / 1000));
+        document.getElementById("readyText").textContent = "Game Baru Di mulai dalam " + diff;
+
+        if (diff <= 0) {
+          clearInterval(resetTimer);
+          resetTimer = null;
+
+          if (isHost) resetRoomForNextRound();
+        }
+      }, 300);
+    }
+
+    function resetRoomForNextRound() {
+      const updates = {
+        status: "waiting",
+        text: "",
+        countdownStartAt: 0,
+        startAt: 0,
+        finishCount: 0,
+        resetAt: 0
+      };
+
+      roomRef.update(updates);
+
+      Object.keys(currentPlayers).forEach((id) => {
+        playersRef.child(id).update({
+          progress: 0,
+          correctIndex: 0,
+          cpm: 0,
+          ready: false,
+          status: "waiting",
+          position: ""
+        });
+      });
+    }
+
+    function getPositionText(position) {
+      if (position === 1) return "1st";
+      if (position === 2) return "2nd";
+      if (position === 3) return "3rd";
+      return position + "th";
+    }
+
+    function generateRoomId() {
+      const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+      let id = "";
+      for (let i = 0; i < 6; i++) id += chars.charAt(Math.floor(Math.random() * chars.length));
+      return id;
+    }
+
+    function copyRoomLink() {
+      navigator.clipboard.writeText(window.location.href);
+      document.getElementById("readyText").textContent = "Link room disalin!";
+    }
+
+    function escapeHtml(value) {
+      return String(value)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+
+    function goBack() {
+      window.location.href = "index.html";
+    }
+  </script>
+</body>
+</html>
