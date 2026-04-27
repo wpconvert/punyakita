@@ -412,6 +412,11 @@
     const bot1 = document.getElementById("botCar1");
     const bot2 = document.getElementById("botCar2");
 
+    input.addEventListener("paste", (e) => {
+  e.preventDefault();
+});
+    
+
     document.addEventListener("DOMContentLoaded", () => {
       loadPlayerName();
       renderText("");
