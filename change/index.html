@@ -125,6 +125,7 @@
       max-height:65px;
       object-fit:contain;
       image-rendering:pixelated;
+      display:block;
     }
 
     .preview-area{
@@ -153,6 +154,7 @@
       max-height:75px;
       object-fit:contain;
       image-rendering:pixelated;
+      display:block;
     }
 
     .notice{
@@ -220,11 +222,15 @@ async function loadSkins(){
   list.innerHTML="<p style='color:#9db7cc;'>Memuat skin...</p>";
 
   try{
-    const res=await fetch(SKIN_GAS_URL+"?t="+Date.now());
+    const res=await fetch(SKIN_GAS_URL+"?action=skins&t="+Date.now());
     const data=await res.json();
 
+    console.log("DATA GAS SKIN:", data);
+
     if(data.status==="success" && Array.isArray(data.data)){
-      skins=data.data.filter(s => String(s.status || "ACTIVE").toUpperCase() === "ACTIVE");
+      skins=data.data
+        .map(normalizeSkin)
+        .filter(s => String(s.status || "ACTIVE").toUpperCase() === "ACTIVE");
 
       if(!skins.length){
         list.innerHTML="<p style='color:#ff6b8a;'>Skin kosong di GAS.</p>";
@@ -238,8 +244,8 @@ async function loadSkins(){
         selectedSkinId=savedSkinId;
       }
 
-      if(!skins.find(s=>getSkinId(s)===selectedSkinId)){
-        selectedSkinId=getSkinId(skins[0]);
+      if(!skins.find(s=>s.skinId===selectedSkinId)){
+        selectedSkinId=skins[0].skinId;
       }
 
       renderSkins();
@@ -251,6 +257,62 @@ async function loadSkins(){
     console.log("Gagal connect ke GAS SKIN:",err);
     list.innerHTML="<p style='color:#ff6b8a;'>Gagal connect ke GAS SKIN.</p>";
   }
+}
+
+function normalizeSkin(raw){
+  const obj={};
+
+  Object.keys(raw || {}).forEach(key=>{
+    obj[String(key).toLowerCase().trim()] = raw[key];
+  });
+
+  const skinId = String(obj.skinid || raw.skinId || raw.id || "").trim();
+  const skinName = String(obj.skinname || raw.skinName || raw.name || skinId).trim();
+  const type = String(obj.type || raw.type || "").trim();
+  const status = String(obj.status || raw.status || "ACTIVE").trim();
+
+  let imageUrl = String(
+    obj.imageurl ||
+    obj.image ||
+    obj.img ||
+    obj.url ||
+    obj.value ||
+    raw.imageUrl ||
+    raw.image ||
+    raw.value ||
+    ""
+  ).trim();
+
+  if(!imageUrl){
+    Object.keys(raw || {}).forEach(key=>{
+      const val=String(raw[key] || "").trim();
+      if(!imageUrl && val.startsWith("http")){
+        imageUrl=val;
+      }
+    });
+  }
+
+  let unlockLevel = Number(
+    obj.unlocklevel ||
+    obj.level ||
+    raw.unlockLevel ||
+    raw.level ||
+    ""
+  );
+
+  if(!unlockLevel || isNaN(unlockLevel)){
+    const levelMatch = type.match(/\d+/);
+    unlockLevel = levelMatch ? Number(levelMatch[0]) : 1;
+  }
+
+  return {
+    skinId,
+    skinName,
+    type,
+    imageUrl,
+    unlockLevel,
+    status
+  };
 }
 
 function getUserLevel(){
@@ -270,38 +332,21 @@ function getSavedUser(){
   }
 }
 
-function getSkinId(s){
-  return String(s.skinId || s.id || "").trim();
-}
-
-function getSkinName(s){
-  return String(s.skinName || s.name || getSkinId(s)).trim();
-}
-
-function getSkinImage(s){
-  return String(s.imageUrl || s.imageurl || s.value || "").trim();
-}
-
-function getSkinLevel(s){
-  return Number(s.unlockLevel || s.unlocklevel || s.level || 1);
-}
-
 function renderSkins(){
   const list=document.getElementById("skinList");
   list.innerHTML="";
 
   skins.forEach(s=>{
-    const id=getSkinId(s);
     const locked=isLocked(s);
     const el=document.createElement("div");
 
-    el.className="skin-card"+(id===selectedSkinId?" active":"")+(locked?" locked":"");
-    el.onclick=()=>selectSkin(id);
+    el.className="skin-card"+(s.skinId===selectedSkinId?" active":"")+(locked?" locked":"");
+    el.onclick=()=>selectSkin(s.skinId);
 
     el.innerHTML=`
       <div class="skin-image">${renderSkin(s)}</div>
-      <h4>${escapeHtml(getSkinName(s))}</h4>
-      <div class="skin-level">Level ${getSkinLevel(s)}</div>
+      <h4>${escapeHtml(s.skinName || s.skinId)}</h4>
+      <div class="skin-level">Level ${s.unlockLevel}</div>
       ${locked ? '<div class="skin-lock">🔒</div>' : ''}
     `;
 
@@ -325,14 +370,14 @@ function renderPreview(){
   if(!s) return;
 
   document.getElementById("previewCar").innerHTML=renderSkin(s);
-  document.getElementById("previewName").textContent=getSkinName(s);
+  document.getElementById("previewName").textContent=s.skinName || s.skinId;
   document.getElementById("previewDesc").textContent=s.type || "";
 
   const useBtn=document.getElementById("useBtn");
 
   if(isLocked(s)){
     useBtn.disabled=true;
-    document.getElementById("notice").textContent="Skin terkunci. Butuh Level "+getSkinLevel(s)+".";
+    document.getElementById("notice").textContent="Skin terkunci. Butuh Level "+s.unlockLevel+".";
     document.getElementById("notice").className="notice error";
   }else{
     useBtn.disabled=false;
@@ -340,10 +385,8 @@ function renderPreview(){
 }
 
 function renderSkin(s){
-  const imageUrl=getSkinImage(s);
-
-  if(imageUrl){
-    return `<img src="${imageUrl}" alt="${escapeHtml(getSkinName(s))}" onerror="this.style.display='none'">`;
+  if(s.imageUrl){
+    return `<img src="${s.imageUrl}" alt="" onerror="this.outerHTML='🏎'">`;
   }
 
   return "🏎";
@@ -357,24 +400,21 @@ function useSkin(){
   const notice=document.getElementById("notice");
 
   if(isLocked(s)){
-    notice.textContent="Skin terkunci. Butuh Level "+getSkinLevel(s)+".";
+    notice.textContent="Skin terkunci. Butuh Level "+s.unlockLevel+".";
     notice.className="notice error";
     return;
   }
 
-  const id=getSkinId(s);
-  const imageUrl=getSkinImage(s);
-
-  selectedSkinId=id;
+  selectedSkinId=s.skinId;
   localStorage.setItem(SELECTED_SKIN_KEY,selectedSkinId);
 
   let user=getSavedUser();
 
-  user.skinId=id;
-  user.selectedSkin=id;
-  user.selectedSkinId=id;
-  user.skinImage=imageUrl;
-  user.selectedSkinImage=imageUrl;
+  user.skinId=s.skinId;
+  user.selectedSkin=s.skinId;
+  user.selectedSkinId=s.skinId;
+  user.skinImage=s.imageUrl;
+  user.selectedSkinImage=s.imageUrl;
 
   localStorage.setItem(STORAGE_KEY,JSON.stringify(user));
 
@@ -386,11 +426,11 @@ function useSkin(){
 }
 
 function isLocked(s){
-  return userLevel < getSkinLevel(s);
+  return userLevel < Number(s.unlockLevel || 1);
 }
 
 function getSkin(){
-  return skins.find(s=>getSkinId(s)===selectedSkinId) || skins[0];
+  return skins.find(s=>s.skinId===selectedSkinId) || skins[0];
 }
 
 function escapeHtml(value){
