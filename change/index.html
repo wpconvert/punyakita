@@ -43,12 +43,16 @@
       font-weight:bold;
     }
 
+    .btn:disabled{
+      opacity:.5;
+      cursor:not-allowed;
+    }
+
     .btn-danger{background:#ff4d6d}
 
-    /* === LAYOUT KIRI KANAN FIX === */
     .grid{
       display:grid;
-      grid-template-columns: 2fr 1fr;
+      grid-template-columns:2fr 1fr;
       gap:20px;
     }
 
@@ -66,30 +70,61 @@
 
     .skin-list{
       display:grid;
-      grid-template-columns: repeat(3,1fr);
+      grid-template-columns:repeat(3,1fr);
       gap:12px;
     }
 
     .skin-card{
+      position:relative;
       text-align:center;
       padding:15px;
       background:#041020;
       border-radius:10px;
       cursor:pointer;
+      min-height:130px;
+      overflow:hidden;
+      border:1px solid rgba(100,223,255,.15);
     }
 
     .skin-card.active{
       outline:2px solid #4dffb8;
     }
 
+    .skin-card.locked{
+      opacity:.75;
+    }
+
+    .skin-lock{
+      position:absolute;
+      inset:0;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      background:rgba(0,0,0,.42);
+      font-size:34px;
+      z-index:2;
+    }
+
+    .skin-level{
+      margin-top:6px;
+      font-size:12px;
+      color:#9db7cc;
+    }
+
     .skin-image{
       font-size:40px;
       margin-bottom:8px;
+      height:70px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
     }
 
     .skin-image img{
-      width:80px;
+      width:90px;
+      max-height:65px;
       object-fit:contain;
+      image-rendering:pixelated;
     }
 
     .preview-area{
@@ -98,10 +133,11 @@
     }
 
     .road{
-      height:80px;
+      height:90px;
       border-bottom:2px dashed #f0b629;
       position:relative;
       margin-bottom:15px;
+      overflow:hidden;
     }
 
     .preview-car{
@@ -113,20 +149,27 @@
     }
 
     .preview-car img{
-      width:100px;
+      width:120px;
+      max-height:75px;
+      object-fit:contain;
+      image-rendering:pixelated;
     }
 
     .notice{
       margin-top:10px;
+      min-height:20px;
       color:#4dffb8;
       text-align:center;
+      font-size:14px;
     }
 
+    .notice.error{
+      color:#ff6b8a;
+    }
   </style>
 </head>
 
 <body>
-
 <div class="app">
 
   <div class="topbar">
@@ -135,64 +178,98 @@
   </div>
 
   <div class="grid">
-
-    <!-- KIRI -->
     <div class="card">
       <h2>Pilihan Skin</h2>
-
       <div class="skin-list" id="skinList"></div>
     </div>
 
-    <!-- KANAN -->
     <div class="card">
       <h2>Skin Dipakai</h2>
 
       <div class="preview-area">
-
         <div class="road">
-          <div class="preview-car" id="previewCar">🏎️</div>
+          <div class="preview-car" id="previewCar">🏎</div>
         </div>
 
         <h3 id="previewName">Default</h3>
         <p id="previewDesc">Skin awal</p>
-
       </div>
 
       <div class="notice" id="notice"></div>
 
-      <button class="btn" onclick="useSkin()">Pakai Skin</button>
+      <button class="btn" id="useBtn" onclick="useSkin()">Pakai Skin</button>
     </div>
-
   </div>
 </div>
 
 <script>
-
+const STORAGE_KEY = "typingRaceUser";
 const SELECTED_SKIN_KEY = "selectedTypingSkin";
+const SKIN_GAS_URL = "https://script.google.com/macros/s/AKfycbzH09mMZcHg5fYQGCT-GDG9ZjjzB4FW9ZCqMIZea4jexDYaSt45pdS1NSa0ScI8zGOiXw/exec";
 
-const skins = [
-  {id:"default",name:"Default",desc:"Skin awal",type:"emoji",value:"🏎️"},
-  {id:"red",name:"Merah",desc:"Mobil merah",type:"emoji",value:"🚗"},
-  {id:"green",name:"Hijau",desc:"Mobil hijau",type:"emoji",value:"🚙"}
-];
-
+let skins = [];
 let selectedSkinId = localStorage.getItem(SELECTED_SKIN_KEY) || "default";
+let userLevel = getUserLevel();
 
-renderSkins();
-renderPreview();
+document.addEventListener("DOMContentLoaded", () => {
+  loadSkins();
+});
+
+async function loadSkins(){
+  const list=document.getElementById("skinList");
+  list.innerHTML="<p style='color:#9db7cc;'>Memuat skin...</p>";
+
+  try{
+    const res=await fetch(SKIN_GAS_URL+"?action=getSkins");
+    const data=await res.json();
+
+    if(data.status==="success" && Array.isArray(data.data)){
+      skins=data.data;
+
+      if(!skins.length){
+        skins=[
+          {id:"default",name:"Default",desc:"Skin awal",type:"emoji",value:"🏎",unlockLevel:1,status:"ACTIVE"}
+        ];
+      }
+
+      if(!skins.find(s=>s.id===selectedSkinId)){
+        selectedSkinId=skins[0].id;
+      }
+
+      renderSkins();
+      renderPreview();
+    }else{
+      list.innerHTML="<p style='color:#ff6b8a;'>Gagal memuat skin.</p>";
+    }
+  }catch(err){
+    list.innerHTML="<p style='color:#ff6b8a;'>Gagal connect ke GAS SKIN.</p>";
+  }
+}
+
+function getUserLevel(){
+  try{
+    const user=JSON.parse(localStorage.getItem(STORAGE_KEY));
+    return Number(user.level || 1);
+  }catch(err){
+    return 1;
+  }
+}
 
 function renderSkins(){
   const list=document.getElementById("skinList");
   list.innerHTML="";
 
   skins.forEach(s=>{
+    const locked=isLocked(s);
     const el=document.createElement("div");
-    el.className="skin-card"+(s.id===selectedSkinId?" active":"");
+    el.className="skin-card"+(s.id===selectedSkinId?" active":"")+(locked?" locked":"");
     el.onclick=()=>selectSkin(s.id);
 
     el.innerHTML=`
       <div class="skin-image">${renderSkin(s)}</div>
-      <h4>${s.name}</h4>
+      <h4>${escapeHtml(s.name || s.id)}</h4>
+      <div class="skin-level">Level ${Number(s.unlockLevel || 1)}</div>
+      ${locked ? '<div class="skin-lock">🔒</div>' : ''}
     `;
 
     list.appendChild(el);
@@ -203,33 +280,90 @@ function selectSkin(id){
   selectedSkinId=id;
   renderSkins();
   renderPreview();
+
+  const notice=document.getElementById("notice");
+  notice.textContent="";
+  notice.className="notice";
 }
 
 function renderPreview(){
   const s=getSkin();
+
+  if(!s) return;
+
   document.getElementById("previewCar").innerHTML=renderSkin(s);
-  document.getElementById("previewName").textContent=s.name;
-  document.getElementById("previewDesc").textContent=s.desc;
+  document.getElementById("previewName").textContent=s.name || s.id;
+  document.getElementById("previewDesc").textContent=s.desc || "";
+
+  const useBtn=document.getElementById("useBtn");
+
+  if(isLocked(s)){
+    useBtn.disabled=true;
+    document.getElementById("notice").textContent="Skin terkunci. Butuh Level "+Number(s.unlockLevel || 1)+".";
+    document.getElementById("notice").className="notice error";
+  }else{
+    useBtn.disabled=false;
+  }
 }
 
 function renderSkin(s){
-  if(s.type==="image") return `<img src="${s.value}">`;
-  return s.value;
+  if(String(s.type || "").toLowerCase()==="image"){
+    return `<img src="${s.value}" alt="${escapeHtml(s.name || s.id)}">`;
+  }
+
+  return s.value || "🏎";
 }
 
 function useSkin(){
+  const s=getSkin();
+
+  if(!s) return;
+
+  const notice=document.getElementById("notice");
+
+  if(isLocked(s)){
+    notice.textContent="Skin terkunci. Butuh Level "+Number(s.unlockLevel || 1)+".";
+    notice.className="notice error";
+    return;
+  }
+
   localStorage.setItem(SELECTED_SKIN_KEY,selectedSkinId);
-  document.getElementById("notice").textContent="Skin dipakai ✓";
+
+  let user=null;
+
+  try{
+    user=JSON.parse(localStorage.getItem(STORAGE_KEY));
+  }catch(err){}
+
+  if(!user) user={};
+
+  user.selectedSkin=selectedSkinId;
+  localStorage.setItem(STORAGE_KEY,JSON.stringify(user));
+
+  notice.textContent="Skin dipakai ✓";
+  notice.className="notice";
+}
+
+function isLocked(s){
+  return userLevel < Number(s.unlockLevel || 1);
 }
 
 function getSkin(){
-  return skins.find(s=>s.id===selectedSkinId);
+  return skins.find(s=>s.id===selectedSkinId) || skins[0];
+}
+
+function escapeHtml(value){
+  return String(value)
+    .replace(/&/g,"&amp;")
+    .replace(/</g,"&lt;")
+    .replace(/>/g,"&gt;")
+    .replace(/"/g,"&quot;")
+    .replace(/'/g,"&#039;");
 }
 
 function goLobby(){
   window.location.href="https://wpconvert.github.io/punyakita/lobby/index.html";
 }
-
 </script>
 
 </body>
