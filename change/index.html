@@ -166,40 +166,6 @@
     .notice.error{
       color:#ff6b8a;
     }
-
-@media(max-width:800px){
-  body{
-    padding:12px;
-  }
-
-  .grid{
-    grid-template-columns:2fr 1fr;
-    gap:12px;
-  }
-
-  .card{
-    padding:14px;
-  }
-
-  .skin-list{
-    grid-template-columns:repeat(3,1fr);
-    gap:8px;
-  }
-
-  .skin-card{
-    padding:10px;
-  }
-
-  .skin-image img{
-    width:70px;
-    max-height:55px;
-  }
-
-  .preview-car img{
-    width:90px;
-    max-height:65px;
-  }
-}
   </style>
 </head>
 
@@ -250,46 +216,46 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 async function loadSkins(){
-  const list = document.getElementById("skinList");
-  list.innerHTML = "<p style='color:#9db7cc;'>Memuat skin...</p>";
+  const list=document.getElementById("skinList");
+  list.innerHTML="<p style='color:#9db7cc;'>Memuat skin...</p>";
 
   try{
-    const res = await fetch(SKIN_GAS_URL + "?t=" + Date.now());
-    const data = await res.json();
+    const res=await fetch(SKIN_GAS_URL+"?t="+Date.now());
+    const data=await res.json();
 
-    if(data.status === "success" && Array.isArray(data.data)){
-      skins = data.data.filter(s => String(s.status || "ACTIVE").toUpperCase() === "ACTIVE");
+    if(data.status==="success" && Array.isArray(data.data)){
+      skins=data.data.filter(s => String(s.status || "ACTIVE").toUpperCase() === "ACTIVE");
 
       if(!skins.length){
-        list.innerHTML = "<p style='color:#ff6b8a;'>Skin kosong di GAS.</p>";
+        list.innerHTML="<p style='color:#ff6b8a;'>Skin kosong di GAS.</p>";
         return;
       }
 
-      const savedUser = getSavedUser();
-      const savedSkinId = savedUser.selectedSkinId || savedUser.skinId || savedUser.selectedSkin || savedUser.skin || "";
+      const savedUser=getSavedUser();
+      const savedSkinId=savedUser.selectedSkinId || savedUser.skinId || savedUser.selectedSkin || savedUser.skin || "";
 
       if(savedSkinId){
-        selectedSkinId = savedSkinId;
+        selectedSkinId=savedSkinId;
       }
 
-      if(!skins.find(s => s.skinId === selectedSkinId)){
-        selectedSkinId = skins[0].skinId;
+      if(!skins.find(s=>getSkinId(s)===selectedSkinId)){
+        selectedSkinId=getSkinId(skins[0]);
       }
 
       renderSkins();
       renderPreview();
     }else{
-      list.innerHTML = "<p style='color:#ff6b8a;'>Gagal memuat skin.</p>";
+      list.innerHTML="<p style='color:#ff6b8a;'>Gagal memuat skin.</p>";
     }
   }catch(err){
-    console.log("Gagal connect ke GAS SKIN:", err);
-    list.innerHTML = "<p style='color:#ff6b8a;'>Gagal connect ke GAS SKIN.</p>";
+    console.log("Gagal connect ke GAS SKIN:",err);
+    list.innerHTML="<p style='color:#ff6b8a;'>Gagal connect ke GAS SKIN.</p>";
   }
 }
 
 function getUserLevel(){
   try{
-    const user = JSON.parse(localStorage.getItem(STORAGE_KEY)) || {};
+    const user=JSON.parse(localStorage.getItem(STORAGE_KEY)) || {};
     return Number(user.level || user.Level || 1);
   }catch(err){
     return 1;
@@ -304,21 +270,38 @@ function getSavedUser(){
   }
 }
 
+function getSkinId(s){
+  return String(s.skinId || s.id || "").trim();
+}
+
+function getSkinName(s){
+  return String(s.skinName || s.name || getSkinId(s)).trim();
+}
+
+function getSkinImage(s){
+  return String(s.imageUrl || s.imageurl || s.value || "").trim();
+}
+
+function getSkinLevel(s){
+  return Number(s.unlockLevel || s.unlocklevel || s.level || 1);
+}
+
 function renderSkins(){
-  const list = document.getElementById("skinList");
-  list.innerHTML = "";
+  const list=document.getElementById("skinList");
+  list.innerHTML="";
 
-  skins.forEach(s => {
-    const locked = isLocked(s);
-    const el = document.createElement("div");
+  skins.forEach(s=>{
+    const id=getSkinId(s);
+    const locked=isLocked(s);
+    const el=document.createElement("div");
 
-    el.className = "skin-card" + (s.skinId === selectedSkinId ? " active" : "") + (locked ? " locked" : "");
-    el.onclick = () => selectSkin(s.skinId);
+    el.className="skin-card"+(id===selectedSkinId?" active":"")+(locked?" locked":"");
+    el.onclick=()=>selectSkin(id);
 
-    el.innerHTML = `
+    el.innerHTML=`
       <div class="skin-image">${renderSkin(s)}</div>
-      <h4>${escapeHtml(s.skinName || s.skinId)}</h4>
-      <div class="skin-level">Level ${Number(s.unlockLevel || 1)}</div>
+      <h4>${escapeHtml(getSkinName(s))}</h4>
+      <div class="skin-level">Level ${getSkinLevel(s)}</div>
       ${locked ? '<div class="skin-lock">🔒</div>' : ''}
     `;
 
@@ -327,83 +310,87 @@ function renderSkins(){
 }
 
 function selectSkin(id){
-  selectedSkinId = id;
+  selectedSkinId=id;
   renderSkins();
   renderPreview();
 
-  const notice = document.getElementById("notice");
-  notice.textContent = "";
-  notice.className = "notice";
+  const notice=document.getElementById("notice");
+  notice.textContent="";
+  notice.className="notice";
 }
 
 function renderPreview(){
-  const s = getSkin();
+  const s=getSkin();
+
   if(!s) return;
 
-  document.getElementById("previewCar").innerHTML = renderSkin(s);
-  document.getElementById("previewName").textContent = s.skinName || s.skinId || "Default";
-  document.getElementById("previewDesc").textContent = s.type || "";
+  document.getElementById("previewCar").innerHTML=renderSkin(s);
+  document.getElementById("previewName").textContent=getSkinName(s);
+  document.getElementById("previewDesc").textContent=s.type || "";
 
-  const useBtn = document.getElementById("useBtn");
+  const useBtn=document.getElementById("useBtn");
 
   if(isLocked(s)){
-    useBtn.disabled = true;
-    document.getElementById("notice").textContent = "Skin terkunci. Butuh Level " + Number(s.unlockLevel || 1) + ".";
-    document.getElementById("notice").className = "notice error";
+    useBtn.disabled=true;
+    document.getElementById("notice").textContent="Skin terkunci. Butuh Level "+getSkinLevel(s)+".";
+    document.getElementById("notice").className="notice error";
   }else{
-    useBtn.disabled = false;
+    useBtn.disabled=false;
   }
 }
 
 function renderSkin(s){
-  const imageUrl = s.imageUrl || "";
+  const imageUrl=getSkinImage(s);
 
   if(imageUrl){
-    return `<img src="${escapeHtml(imageUrl)}" alt="${escapeHtml(s.skinName || s.skinId || "skin")}">`;
+    return `<img src="${imageUrl}" alt="${escapeHtml(getSkinName(s))}" onerror="this.style.display='none'">`;
   }
 
   return "🏎";
 }
 
 function useSkin(){
-  const s = getSkin();
+  const s=getSkin();
+
   if(!s) return;
 
-  const notice = document.getElementById("notice");
+  const notice=document.getElementById("notice");
 
   if(isLocked(s)){
-    notice.textContent = "Skin terkunci. Butuh Level " + Number(s.unlockLevel || 1) + ".";
-    notice.className = "notice error";
+    notice.textContent="Skin terkunci. Butuh Level "+getSkinLevel(s)+".";
+    notice.className="notice error";
     return;
   }
 
-  selectedSkinId = s.skinId;
+  const id=getSkinId(s);
+  const imageUrl=getSkinImage(s);
 
-  localStorage.setItem(SELECTED_SKIN_KEY, selectedSkinId);
+  selectedSkinId=id;
+  localStorage.setItem(SELECTED_SKIN_KEY,selectedSkinId);
 
-  let user = getSavedUser();
+  let user=getSavedUser();
 
-  user.skinId = s.skinId;
-  user.selectedSkin = s.skinId;
-  user.selectedSkinId = s.skinId;
-  user.skinImage = s.imageUrl;
-  user.selectedSkinImage = s.imageUrl;
+  user.skinId=id;
+  user.selectedSkin=id;
+  user.selectedSkinId=id;
+  user.skinImage=imageUrl;
+  user.selectedSkinImage=imageUrl;
 
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(user));
+  localStorage.setItem(STORAGE_KEY,JSON.stringify(user));
 
-  notice.textContent = "Skin dipakai ✓";
-  notice.className = "notice";
+  notice.textContent="Skin dipakai ✓";
+  notice.className="notice";
 
   renderSkins();
   renderPreview();
 }
 
 function isLocked(s){
-  return userLevel < Number(s.unlockLevel || 1);
+  return userLevel < getSkinLevel(s);
 }
 
 function getSkin(){
-  return skins.find(s => s.skinId === selectedSkinId) || skins[0];
+  return skins.find(s=>getSkinId(s)===selectedSkinId) || skins[0];
 }
 
 function escapeHtml(value){
@@ -416,7 +403,7 @@ function escapeHtml(value){
 }
 
 function goLobby(){
-  window.location.href = "https://wpconvert.github.io/punyakita/lobby/index.html";
+  window.location.href="https://wpconvert.github.io/punyakita/lobby/index.html";
 }
 </script>
 
