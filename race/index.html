@@ -21,12 +21,13 @@
         #07111f;
       padding: 18px;
       color: #111827;
-      overflow-x: auto;
+      overflow-x: hidden;
     }
 
     .app {
-      width: 1380px;
-      min-width: 1380px;
+      width: 100%;
+      max-width: 1380px;
+      margin: 0 auto;
       background: #f8fbff;
       border: 1px solid #c7d9ea;
       border-radius: 10px;
@@ -51,6 +52,8 @@
       border-radius: 9px;
       padding: 12px 14px;
       width: fit-content;
+      max-width: 100%;
+      flex-wrap: wrap;
     }
 
     .light-box {
@@ -124,6 +127,7 @@
 
     .race-top {
       margin-bottom: 12px;
+      width: 100%;
     }
 
     .lane {
@@ -131,6 +135,7 @@
       height: 62px;
       border-bottom: 2px dashed #f0b629;
       overflow: hidden;
+      width: 100%;
     }
 
     .lane-name {
@@ -154,6 +159,20 @@
       transition: left 0.12s linear;
       filter: drop-shadow(0 2px 2px rgba(0,0,0,0.2));
       z-index: 2;
+      width: 48px;
+      height: 48px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .car img {
+      width: 48px;
+      height: 48px;
+      object-fit: contain;
+      display: block;
+      pointer-events: none;
+      user-select: none;
     }
 
     .finish-line {
@@ -200,6 +219,7 @@
       margin-bottom: 18px;
       white-space: pre-wrap;
       min-height: 96px;
+      word-break: break-word;
     }
 
     .char {
@@ -294,6 +314,65 @@
       color: #607789;
       font-size: 13px;
     }
+
+    @media (max-width: 700px) {
+      body {
+        padding: 10px;
+      }
+
+      .app {
+        padding: 14px;
+      }
+
+      .title {
+        font-size: 19px;
+      }
+
+      .start-panel {
+        width: 100%;
+      }
+
+      .lane-name {
+        width: 90px;
+        font-size: 12px;
+        padding-right: 8px;
+      }
+
+      .car {
+        width: 40px;
+        height: 40px;
+        font-size: 32px;
+      }
+
+      .car img {
+        width: 40px;
+        height: 40px;
+      }
+
+      .finish-line {
+        right: 48px;
+      }
+
+      .lane-position {
+        right: 4px;
+        width: 38px;
+        font-size: 13px;
+      }
+
+      .target-text,
+      .input-box {
+        font-size: 18px;
+      }
+
+      .result-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      .menu-btn {
+        width: 100%;
+        min-width: 0;
+      }
+    }
   </style>
 </head>
 
@@ -377,9 +456,11 @@
         </div>
       </div>
     </div>
-      </div>
+  </div>
+
   <script>
     const STORAGE_KEY = "typingRaceUser";
+    const SKIN_GAS_URL = "https://script.google.com/macros/s/AKfycbwxbDTMY3rAT7-6RdtutUfeOjVf0SKb6L-Ztfp6cK4AUuq4ziiOD65c-EqZk9LwJrM/exec";
 
     const texts = [
       "Siapa takut menjadi perawan tua? Hari gini, menikah bukan lagi sekedar institusi romantis nggak jelas. Menikah adalah kerjasama dua pihak yang menguntungkan.",
@@ -403,8 +484,8 @@
     let botProgress1 = 0;
     let botProgress2 = 0;
 
-    const trackStart = 135;
-    const maxMove = 1080;
+    let trackStart = 135;
+    let maxMove = 1080;
 
     const target = document.getElementById("targetText");
     const input = document.getElementById("typingInput");
@@ -413,19 +494,43 @@
     const bot2 = document.getElementById("botCar2");
 
     input.addEventListener("paste", (e) => {
-  e.preventDefault();
-});
-    
+      e.preventDefault();
+    });
 
     document.addEventListener("DOMContentLoaded", () => {
       loadPlayerName();
       renderText("");
+      setupTrackSize();
       resetCars();
+      loadRaceSkins();
     });
 
     window.addEventListener("load", () => {
       renderText("");
+      setupTrackSize();
+      resetCars();
     });
+
+    window.addEventListener("resize", () => {
+      setupTrackSize();
+      updatePlayerProgress();
+
+      bot1.style.left = (trackStart + botProgress1) + "px";
+      bot2.style.left = (trackStart + botProgress2) + "px";
+    });
+
+    function setupTrackSize() {
+      const lane = document.querySelector(".lane");
+      const laneWidth = lane ? lane.clientWidth : 1380;
+
+      if (window.innerWidth <= 700) {
+        trackStart = 95;
+      } else {
+        trackStart = 135;
+      }
+
+      maxMove = Math.max(160, laneWidth - trackStart - 120);
+    }
 
     function loadPlayerName() {
       const saved = localStorage.getItem(STORAGE_KEY);
@@ -436,6 +541,146 @@
         const user = JSON.parse(saved);
         document.getElementById("playerName").innerHTML = (user.displayName || user.username || "Player") + "<br>(you)";
       } catch (err) {}
+    }
+
+    async function loadRaceSkins() {
+      try {
+        const res = await fetch(SKIN_GAS_URL + "?t=" + Date.now());
+        const json = await res.json();
+
+        const skins = normalizeSkins(json);
+        const level1DefaultSkins = skins.filter((skin) => {
+          const level = String(skin.level || skin.Level || skin.LEVEL || "1").trim();
+          const type = String(skin.type || skin.Type || skin.TYPE || skin.category || skin.Category || "").toLowerCase();
+          const status = String(skin.status || skin.Status || skin.STATUS || "").toLowerCase();
+
+          return level === "1" && (
+            type.includes("default") ||
+            status.includes("default") ||
+            skin.default === true ||
+            skin.isDefault === true ||
+            skin.defaults === true ||
+            type === ""
+          );
+        });
+
+        const allLevel1 = skins.filter((skin) => {
+          const level = String(skin.level || skin.Level || skin.LEVEL || "1").trim();
+          return level === "1";
+        });
+
+        const botPool = level1DefaultSkins.length ? level1DefaultSkins : allLevel1;
+
+        const botSkin1 = getRandomSkin(botPool);
+        const botSkin2 = getRandomSkin(botPool);
+
+        if (botSkin1) setCarSkin(bot1, getSkinImage(botSkin1), "🚗");
+        if (botSkin2) setCarSkin(bot2, getSkinImage(botSkin2), "🚙");
+
+        const playerSkin = findPlayerSelectedSkin(skins) || getRandomSkin(botPool);
+        if (playerSkin) setCarSkin(playerCar, getSkinImage(playerSkin), "🏎️");
+
+      } catch (err) {
+        console.log("Gagal load skin GAS:", err);
+      }
+    }
+
+    function normalizeSkins(json) {
+      if (Array.isArray(json)) return json;
+
+      if (json && Array.isArray(json.data)) return json.data;
+      if (json && Array.isArray(json.skins)) return json.skins;
+      if (json && json.status === "success" && Array.isArray(json.result)) return json.result;
+
+      return [];
+    }
+
+    function getSkinImage(skin) {
+      return (
+        skin.image ||
+        skin.Image ||
+        skin.IMAGE ||
+        skin.img ||
+        skin.Img ||
+        skin.url ||
+        skin.URL ||
+        skin.link ||
+        skin.Link ||
+        skin.skin ||
+        skin.Skin ||
+        ""
+      );
+    }
+
+    function getSkinId(skin) {
+      return String(
+        skin.id ||
+        skin.ID ||
+        skin.skinId ||
+        skin.skin_id ||
+        skin.name ||
+        skin.Name ||
+        skin.nama ||
+        ""
+      ).trim();
+    }
+
+    function findPlayerSelectedSkin(skins) {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (!saved) return null;
+
+      try {
+        const user = JSON.parse(saved);
+        const selectedSkinId = String(
+          user.selectedSkinId ||
+          user.skinId ||
+          user.selectedSkin ||
+          user.skin ||
+          ""
+        ).trim();
+
+        const selectedSkinImage = String(
+          user.selectedSkinImage ||
+          user.skinImage ||
+          user.image ||
+          ""
+        ).trim();
+
+        if (selectedSkinImage) {
+          return { image: selectedSkinImage };
+        }
+
+        if (selectedSkinId) {
+          return skins.find((skin) => getSkinId(skin) === selectedSkinId) || null;
+        }
+
+        return null;
+      } catch (err) {
+        return null;
+      }
+    }
+
+    function getRandomSkin(list) {
+      if (!list || !list.length) return null;
+      return list[Math.floor(Math.random() * list.length)];
+    }
+
+    function setCarSkin(element, imageUrl, fallbackEmoji) {
+      if (!imageUrl) {
+        element.textContent = fallbackEmoji;
+        return;
+      }
+
+      element.innerHTML = "";
+
+      const img = document.createElement("img");
+      img.src = imageUrl;
+      img.alt = "skin";
+      img.onerror = () => {
+        element.innerHTML = fallbackEmoji;
+      };
+
+      element.appendChild(img);
     }
 
     function renderText(value) {
@@ -560,6 +805,11 @@
 
       playerCar.style.left = left + "px";
 
+      if (!startTime) {
+        document.getElementById("speedLine").textContent = "0 cpm";
+        return;
+      }
+
       const elapsed = Math.max((Date.now() - startTime) / 1000, 1);
       const cpm = Math.round((correctIndex / elapsed) * 60);
       document.getElementById("speedLine").textContent = cpm + " cpm";
@@ -651,9 +901,12 @@
     }
 
     function resetCars() {
+      setupTrackSize();
+
       playerCar.style.left = trackStart + "px";
       bot1.style.left = trackStart + "px";
       bot2.style.left = trackStart + "px";
+
       document.getElementById("playerPos").textContent = "";
       document.getElementById("bot1Pos").textContent = "";
       document.getElementById("bot2Pos").textContent = "";
