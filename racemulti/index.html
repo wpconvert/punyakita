@@ -32,7 +32,30 @@
       box-shadow: 0 0 28px rgba(0, 174, 255, 0.15);
     }
 
-    .title { color: #2f55a4; font-size: 22px; font-weight: bold; margin-bottom: 12px; }
+    .top-head {
+      display: flex;
+      align-items: center;
+      gap: 18px;
+      margin-bottom: 12px;
+    }
+
+    .title {
+      color: #2f55a4;
+      font-size: 22px;
+      font-weight: bold;
+    }
+
+    .host-box {
+      color: #2f55a4;
+      font-size: 16px;
+      font-weight: bold;
+      padding: 10px 18px;
+      border: 2px solid #ff2b2b;
+      min-width: 250px;
+      text-align: center;
+      background: rgba(255, 255, 255, 0.35);
+    }
+
     .room-info { margin-bottom: 12px; color: #4c7c8e; font-size: 14px; font-weight: bold; }
     .room-info span { color: #2f55a4; }
 
@@ -222,7 +245,10 @@
 
 <body>
   <div class="app">
-    <div class="title" id="raceTitle">The race is about to start!</div>
+    <div class="top-head">
+      <div class="title" id="raceTitle">The race is about to start!</div>
+      <div class="host-box" id="hostBox">HOST ROOM : -</div>
+    </div>
 
     <div class="room-info">
       Room ID: <span id="roomIdText">-</span> | Link: <span id="roomLinkText">-</span>
@@ -291,14 +317,23 @@
 
     const STORAGE_KEY = "typingRaceUser";
     const PLAYER_ID_KEY = "typingRacePlayerId";
+    const RACE_DURATION = 30;
 
     const texts = [
       "Siapa takut menjadi perawan tua? Hari gini, menikah bukan lagi sekedar institusi romantis nggak jelas. Menikah adalah kerjasama dua pihak yang menguntungkan.",
       "Aku bukan orang yang lemah. Kalau aku lemah, sudah kubersembunyi di dasar lemah. Namun aku orang yang kuat. Dengan dagu terangkat, menggenggam kejujuran erat erat.",
-      "Aku percaya bahwa usaha yang dilakukan dengan sungguh sungguh akan membawa hasil yang baik.",
-      "Jangan menyerah hanya karena perjalanan terasa sulit, sebab setiap langkah kecil tetap berarti.",
-      "Kecepatan mengetik yang baik datang dari latihan, fokus, dan kebiasaan membaca teks dengan teliti.",
-      "Permainan ini dibuat untuk melatih ketepatan, kecepatan, dan konsentrasi saat mengetik."
+      "Aku percaya bahwa usaha yang dilakukan dengan sungguh sungguh akan membawa hasil yang baik, walaupun prosesnya terasa panjang dan melelahkan.",
+      "Jangan menyerah hanya karena perjalanan terasa sulit, sebab setiap langkah kecil tetap berarti untuk mendekatkan diri pada tujuan besar.",
+      "Kecepatan mengetik yang baik datang dari latihan, fokus, kebiasaan membaca teks dengan teliti, dan keberanian memperbaiki kesalahan.",
+      "Permainan ini dibuat untuk melatih ketepatan, kecepatan, konsentrasi, serta kemampuan menjaga ritme ketika tekanan waktu mulai terasa.",
+      "Dalam sebuah perlombaan mengetik, kemenangan bukan hanya soal cepat, tetapi juga soal sabar membaca kata demi kata tanpa terburu buru.",
+      "Setiap pemain memiliki cara berbeda untuk mencapai garis akhir, ada yang mengandalkan kecepatan, ada juga yang mengandalkan ketelitian.",
+      "Ketika waktu mulai berjalan, jangan panik melihat lawan bergerak lebih cepat, tetap fokus pada teks dan pastikan setiap huruf tertulis benar.",
+      "Orang yang konsisten berlatih setiap hari biasanya akan berkembang lebih cepat daripada orang yang hanya bermain ketika sedang ingin menang.",
+      "Kemenangan kecil yang diperoleh hari ini bisa menjadi awal dari kebiasaan besar yang membuat kemampuan mengetik semakin kuat di masa depan.",
+      "Balapan ini bukan sekadar permainan, tetapi latihan untuk mengatur fokus, membaca dengan cepat, mengetik dengan rapi, dan tetap tenang.",
+      "Jika kamu salah mengetik, jangan langsung kehilangan ritme, tarik napas sebentar lalu lanjutkan dengan lebih hati hati sampai selesai.",
+      "Pemain terbaik bukan yang tidak pernah salah, melainkan yang mampu memperbaiki kesalahan dengan cepat tanpa kehilangan arah permainan."
     ];
 
     let roomId = getRoomId();
@@ -309,6 +344,7 @@
     let started = false;
     let finished = false;
     let countdownRunning = false;
+    let raceTimerRunning = false;
     let startTime = null;
     let endTime = null;
     let wrongCount = 0;
@@ -318,6 +354,7 @@
     let hasJoined = false;
     let currentPlayers = {};
     let resetTimer = null;
+    let raceTimer = null;
 
     const trackStart = 175;
     const maxMove = 1040;
@@ -387,17 +424,27 @@
           roomRef.set({
             roomId: roomId,
             hostId: playerId,
+            hostName: playerDisplayName,
             status: "waiting",
             text: "",
             createdAt: now,
             expiresAt: now + 60 * 60 * 1000,
             countdownStartAt: 0,
             startAt: 0,
+            raceEndAt: 0,
             finishCount: 0,
             resetAt: 0
           }).then(() => {
             joinAsHost();
           });
+        } else {
+          const data = snap.val();
+
+          if (data.hostId === playerId && !data.hostName) {
+            roomRef.update({
+              hostName: playerDisplayName
+            });
+          }
         }
       });
     }
@@ -459,6 +506,8 @@
         isHost = data.hostId === playerId;
         text = data.text || "";
 
+        document.getElementById("hostBox").textContent = "HOST ROOM : " + (data.hostName || "-");
+
         if (data.expiresAt && Date.now() > data.expiresAt) {
           document.getElementById("readyText").textContent = "Room sudah expired.";
           document.getElementById("startBtn").disabled = true;
@@ -518,6 +567,12 @@
     }
 
     function updateRoomStatus(data) {
+      if (data.status !== "racing" && raceTimer) {
+        clearInterval(raceTimer);
+        raceTimer = null;
+        raceTimerRunning = false;
+      }
+
       if (data.status === "waiting") {
         started = false;
         finished = false;
@@ -551,6 +606,8 @@
           renderText(input.value || "");
         }
 
+        runRaceTimer(data);
+
         if (hasJoined && !started) {
           started = true;
           startTime = data.startAt || Date.now();
@@ -569,6 +626,16 @@
 
       if (data.status === "resetting") {
         input.disabled = true;
+
+        const me = data.players && data.players[playerId];
+
+        if (hasJoined && me && me.status === "finished" && !finished) {
+          finished = true;
+          endTime = Date.now();
+          correctIndex = Number(me.correctIndex || 0);
+          showResultFromPositionText(me.position || "3rd");
+        }
+
         runResetCountdown(data);
       }
 
@@ -646,6 +713,7 @@
         text: selectedText,
         countdownStartAt: Date.now(),
         startAt: startAt,
+        raceEndAt: startAt + RACE_DURATION * 1000,
         finishCount: 0,
         resetAt: 0
       });
@@ -657,7 +725,8 @@
           cpm: 0,
           ready: false,
           status: "countdown",
-          position: ""
+          position: "",
+          timedOut: false
         });
       });
     }
@@ -690,6 +759,30 @@
 
           if (isHost) {
             roomRef.update({ status: "racing" });
+          }
+        }
+      }, 250);
+    }
+
+    function runRaceTimer(data) {
+      if (raceTimerRunning) return;
+
+      raceTimerRunning = true;
+
+      raceTimer = setInterval(() => {
+        const now = Date.now();
+        const raceEndAt = Number(data.raceEndAt || 0);
+        const diff = Math.max(0, Math.ceil((raceEndAt - now) / 1000));
+
+        document.getElementById("countNumber").textContent = ":" + String(diff).padStart(2, "0");
+
+        if (diff <= 0) {
+          clearInterval(raceTimer);
+          raceTimer = null;
+          raceTimerRunning = false;
+
+          if (isHost && currentRoomData && currentRoomData.status === "racing") {
+            finishRaceByTimeout();
           }
         }
       }, 250);
@@ -789,11 +882,49 @@
           correctIndex: text.length,
           status: "finished",
           position: getPositionText(position),
-          finishedAt: Date.now()
+          finishedAt: Date.now(),
+          timedOut: false
         });
 
         showResult(position);
         checkAllFinished();
+      });
+    }
+
+    function finishRaceByTimeout() {
+      playersRef.once("value").then((snap) => {
+        const players = snap.val() || {};
+        const list = Object.values(players);
+        let finishCount = Number(currentRoomData.finishCount || 0);
+
+        const unfinished = list
+          .filter((p) => p.status !== "finished")
+          .sort((a, b) => {
+            const progressDiff = Number(b.progress || 0) - Number(a.progress || 0);
+            if (progressDiff !== 0) return progressDiff;
+
+            const indexDiff = Number(b.correctIndex || 0) - Number(a.correctIndex || 0);
+            if (indexDiff !== 0) return indexDiff;
+
+            return Number(b.cpm || 0) - Number(a.cpm || 0);
+          });
+
+        const updates = {};
+
+        unfinished.forEach((player, index) => {
+          const position = finishCount + index + 1;
+
+          updates["players/" + player.id + "/status"] = "finished";
+          updates["players/" + player.id + "/position"] = getPositionText(position);
+          updates["players/" + player.id + "/finishedAt"] = Date.now();
+          updates["players/" + player.id + "/timedOut"] = true;
+        });
+
+        updates.finishCount = list.length;
+        updates.status = "resetting";
+        updates.resetAt = Date.now() + 10000;
+
+        roomRef.update(updates);
       });
     }
 
@@ -811,6 +942,23 @@
       document.getElementById("resultBox").style.display = "block";
       document.getElementById("raceTitle").textContent = "Race Finished!";
       document.getElementById("readyText").textContent = "Kamu finish!";
+    }
+
+    function showResultFromPositionText(positionText) {
+      const position = Number(String(positionText).replace(/\D/g, "")) || 3;
+      const durationMinutes = RACE_DURATION / 60;
+      const wpm = Math.round((correctIndex / 5) / durationMinutes);
+      const accuracy = Math.max(0, Math.round(((text.length - wrongCount) / text.length) * 100));
+      const bonusPosition = position === 1 ? 50 : position === 2 ? 25 : 10;
+      const exp = Math.floor(wpm + accuracy / 2 + bonusPosition);
+
+      document.getElementById("resultWpm").textContent = wpm;
+      document.getElementById("resultAccuracy").textContent = accuracy + "%";
+      document.getElementById("resultPosition").textContent = positionText;
+      document.getElementById("resultExp").textContent = exp;
+      document.getElementById("resultBox").style.display = "block";
+      document.getElementById("raceTitle").textContent = "Race Finished!";
+      document.getElementById("readyText").textContent = "Waktu habis!";
     }
 
     function checkAllFinished() {
@@ -851,6 +999,7 @@
         text: "",
         countdownStartAt: 0,
         startAt: 0,
+        raceEndAt: 0,
         finishCount: 0,
         resetAt: 0
       };
@@ -864,7 +1013,8 @@
           cpm: 0,
           ready: false,
           status: "waiting",
-          position: ""
+          position: "",
+          timedOut: false
         });
       });
     }
