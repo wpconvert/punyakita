@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Ubah Skin</title>
+
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: Arial, sans-serif;
+    }
+
+    body {
+      min-height: 100vh;
+      background:
+        radial-gradient(circle at top left, rgba(0, 255, 255, 0.14), transparent 35%),
+        radial-gradient(circle at bottom right, rgba(0, 110, 255, 0.18), transparent 35%),
+        #07111f;
+      color: #eaf6ff;
+      padding: 24px;
+      overflow-x: auto;
+    }
+
+    .app {
+      width: 1200px;
+      max-width: 1200px;
+      min-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .topbar {
+      text-align: center;
+      margin-bottom: 22px;
+      padding: 18px 20px;
+      background: rgba(10, 25, 45, 0.86);
+      border: 1px solid rgba(80, 170, 255, 0.25);
+      border-radius: 18px;
+      box-shadow: 0 0 28px rgba(0, 174, 255, 0.12);
+    }
+
+    .topbar h1 {
+      font-size: 26px;
+      color: #64dfff;
+      margin-bottom: 12px;
+    }
+
+    .btn {
+      border: none;
+      cursor: pointer;
+      padding: 11px 16px;
+      border-radius: 12px;
+      font-weight: bold;
+      color: white;
+      background: linear-gradient(135deg, #009dff, #00e0ff);
+      box-shadow: 0 8px 18px rgba(0, 157, 255, 0.25);
+      transition: 0.2s ease;
+    }
+
+    .btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 24px rgba(0, 224, 255, 0.35);
+    }
+
+    .btn-danger {
+      background: linear-gradient(135deg, #ff4d6d, #ff8a00);
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 1.15fr 0.85fr;
+      gap: 20px;
+      align-items: stretch;
+    }
+
+    .card {
+      height: 100%;
+      background: rgba(10, 25, 45, 0.86);
+      border: 1px solid rgba(80, 170, 255, 0.25);
+      border-radius: 20px;
+      padding: 24px;
+      box-shadow: 0 0 28px rgba(0, 174, 255, 0.1);
+    }
+
+    .card h2 {
+      color: #64dfff;
+      margin-bottom: 8px;
+    }
+
+    .card-desc {
+      color: #9db7cc;
+      font-size: 14px;
+      margin-bottom: 18px;
+      line-height: 1.5;
+    }
+
+    .skin-list {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 14px;
+    }
+
+    .skin-card {
+      text-align: center;
+      background: rgba(4, 15, 30, 0.8);
+      border: 1px solid rgba(100, 223, 255, 0.18);
+      border-radius: 16px;
+      padding: 16px;
+      color: white;
+      cursor: pointer;
+      transition: 0.2s ease;
+      min-height: 150px;
+    }
+
+    .skin-card:hover {
+      border-color: rgba(100, 223, 255, 0.75);
+      transform: translateY(-3px);
+      background: rgba(8, 35, 60, 0.9);
+    }
+
+    .skin-card.active {
+      border-color: #4dffb8;
+      box-shadow: 0 0 18px rgba(77, 255, 184, 0.25);
+    }
+
+    .skin-image {
+      height: 78px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      margin-bottom: 12px;
+      font-size: 50px;
+    }
+
+    .skin-image img {
+      width: 110px;
+      max-height: 70px;
+      object-fit: contain;
+      image-rendering: pixelated;
+    }
+
+    .skin-card h3 {
+      font-size: 16px;
+      margin-bottom: 5px;
+    }
+
+    .skin-card p {
+      color: #9db7cc;
+      font-size: 12px;
+      line-height: 1.4;
+    }
+
+    .preview-box {
+      min-height: 430px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .preview-area {
+      margin-top: 16px;
+      background: rgba(4, 15, 30, 0.75);
+      border: 1px solid rgba(100, 223, 255, 0.18);
+      border-radius: 18px;
+      padding: 24px;
+      text-align: center;
+    }
+
+    .preview-title {
+      color: #9db7cc;
+      font-size: 13px;
+      margin-bottom: 18px;
+    }
+
+    .road {
+      height: 100px;
+      border-bottom: 2px dashed #f0b629;
+      position: relative;
+      overflow: hidden;
+      margin-bottom: 20px;
+    }
+
+    .preview-car {
+      position: absolute;
+      left: 50%;
+      top: 18px;
+      transform: translateX(-50%);
+      font-size: 58px;
+    }
+
+    .preview-car img {
+      width: 130px;
+      max-height: 75px;
+      object-fit: contain;
+      image-rendering: pixelated;
+    }
+
+    .current-info {
+      text-align: center;
+      margin-top: 12px;
+    }
+
+    .current-info h3 {
+      color: #64dfff;
+      margin-bottom: 6px;
+    }
+
+    .current-info p {
+      color: #9db7cc;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .notice {
+      min-height: 20px;
+      margin-top: 12px;
+      color: #4dffb8;
+      font-size: 13px;
+      text-align: center;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="app">
+    <div class="topbar">
+      <h1>UBAH SKIN</h1>
+      <button class="btn btn-danger" onclick="goLobby()">Kembali Lobby</button>
+    </div>
+
+    <div class="grid">
+      <div class="card">
+        <h2>Pilihan Skin</h2>
+        <p class="card-desc">
+          Pilih skin yang ingin kamu gunakan saat bermain.
+        </p>
+
+        <div class="skin-list" id="skinList"></div>
+      </div>
+
+      <div class="card preview-box">
+        <div>
+          <h2>Skin Dipakai</h2>
+          <p class="card-desc">
+            Ini tampilan skin yang sedang kamu pilih.
+          </p>
+
+          <div class="preview-area">
+            <div class="preview-title">Preview di arena</div>
+
+            <div class="road">
+              <div class="preview-car" id="previewCar">🏎️</div>
+            </div>
+
+            <div class="current-info">
+              <h3 id="previewName">Default Racer</h3>
+              <p id="previewDesc">Skin awal untuk semua pemain.</p>
+            </div>
+          </div>
+
+          <div class="notice" id="notice"></div>
+        </div>
+
+        <button class="btn" onclick="useSkin()">Pakai Skin Ini</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const STORAGE_KEY = "typingRaceUser";
+    const SELECTED_SKIN_KEY = "selectedTypingSkin";
+
+    const skins = [
+      {
+        id: "default",
+        name: "Default Racer",
+        desc: "Skin awal untuk semua pemain.",
+        type: "emoji",
+        value: "🏎️"
+      },
+      {
+        id: "red_pixel",
+        name: "Red Pixel",
+        desc: "Mobil pixel merah untuk balapan cepat.",
+        type: "emoji",
+        value: "🚗"
+      },
+      {
+        id: "green_pixel",
+        name: "Green Pixel",
+        desc: "Mobil hijau ringan dan simpel.",
+        type: "emoji",
+        value: "🚙"
+      },
+      {
+        id: "rocket",
+        name: "Rocket Fun",
+        desc: "Skin lucu untuk testing animasi.",
+        type: "emoji",
+        value: "🚀"
+      }
+    ];
+
+    let selectedSkinId = localStorage.getItem(SELECTED_SKIN_KEY) || "default";
+
+    document.addEventListener("DOMContentLoaded", () => {
+      initUser();
+      renderSkins();
+      renderPreview();
+    });
+
+    function initUser() {
+      let savedUser = localStorage.getItem(STORAGE_KEY);
+
+      if (!savedUser) {
+        const guest = "Guest_" + Math.floor(10000 + Math.random() * 90000);
+
+        const user = {
+          type: "guest",
+          username: guest,
+          displayName: guest,
+          level: 1,
+          exp: 0,
+          selectedSkin: "default"
+        };
+
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(user));
+        localStorage.setItem(SELECTED_SKIN_KEY, "default");
+      }
+    }
+
+    function renderSkins() {
+      const list = document.getElementById("skinList");
+      list.innerHTML = "";
+
+      skins.forEach((skin) => {
+        const card = document.createElement("div");
+        card.className = "skin-card" + (skin.id === selectedSkinId ? " active" : "");
+        card.onclick = () => selectSkin(skin.id);
+
+        card.innerHTML = `
+          <div class="skin-image">
+            ${renderSkinVisual(skin)}
+          </div>
+          <h3>${skin.name}</h3>
+          <p>${skin.desc}</p>
+        `;
+
+        list.appendChild(card);
+      });
+    }
+
+    function selectSkin(id) {
+      selectedSkinId = id;
+      renderSkins();
+      renderPreview();
+      document.getElementById("notice").textContent = "";
+    }
+
+    function renderPreview() {
+      const skin = getSelectedSkin();
+
+      document.getElementById("previewCar").innerHTML = renderSkinVisual(skin);
+      document.getElementById("previewName").textContent = skin.name;
+      document.getElementById("previewDesc").textContent = skin.desc;
+    }
+
+    function renderSkinVisual(skin) {
+      if (skin.type === "image") {
+        return `<img src="${skin.value}" alt="${skin.name}">`;
+      }
+
+      return skin.value;
+    }
+
+    function useSkin() {
+      const skin = getSelectedSkin();
+
+      localStorage.setItem(SELECTED_SKIN_KEY, skin.id);
+
+      let user = null;
+
+      try {
+        user = JSON.parse(localStorage.getItem(STORAGE_KEY));
+      } catch (err) {}
+
+      if (!user) {
+        user = {};
+      }
+
+      user.selectedSkin = skin.id;
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(user));
+
+      document.getElementById("notice").textContent = "Skin berhasil dipakai ✓";
+    }
+
+    function getSelectedSkin() {
+      return skins.find((skin) => skin.id === selectedSkinId) || skins[0];
+    }
+
+    function goLobby() {
+      window.location.href = "https://wpconvert.github.io/punyakita/lobby/index.html";
+    }
+  </script>
+</body>
+</html>
