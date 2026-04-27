@@ -166,6 +166,40 @@
     .notice.error{
       color:#ff6b8a;
     }
+
+@media(max-width:800px){
+  body{
+    padding:12px;
+  }
+
+  .grid{
+    grid-template-columns:2fr 1fr;
+    gap:12px;
+  }
+
+  .card{
+    padding:14px;
+  }
+
+  .skin-list{
+    grid-template-columns:repeat(3,1fr);
+    gap:8px;
+  }
+
+  .skin-card{
+    padding:10px;
+  }
+
+  .skin-image img{
+    width:70px;
+    max-height:55px;
+  }
+
+  .preview-car img{
+    width:90px;
+    max-height:65px;
+  }
+}
   </style>
 </head>
 
@@ -208,7 +242,7 @@ const SELECTED_SKIN_KEY = "selectedTypingSkin";
 const SKIN_GAS_URL = "https://script.google.com/macros/s/AKfycbwxbDTMY3rAT7-6RdtutUfeOjVf0SKb6L-Ztfp6cK4AUuq4ziiOD65c-EqZk9LwJrM/exec";
 
 let skins = [];
-let selectedSkinId = localStorage.getItem(SELECTED_SKIN_KEY) || "default";
+let selectedSkinId = localStorage.getItem(SELECTED_SKIN_KEY) || "";
 let userLevel = getUserLevel();
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -216,58 +250,74 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 async function loadSkins(){
-  const list=document.getElementById("skinList");
-  list.innerHTML="<p style='color:#9db7cc;'>Memuat skin...</p>";
+  const list = document.getElementById("skinList");
+  list.innerHTML = "<p style='color:#9db7cc;'>Memuat skin...</p>";
 
   try{
-    const res=await fetch(SKIN_GAS_URL+"?action=getSkins");
-    const data=await res.json();
+    const res = await fetch(SKIN_GAS_URL + "?t=" + Date.now());
+    const data = await res.json();
 
-    if(data.status==="success" && Array.isArray(data.data)){
-      skins=data.data;
+    if(data.status === "success" && Array.isArray(data.data)){
+      skins = data.data.filter(s => String(s.status || "ACTIVE").toUpperCase() === "ACTIVE");
 
       if(!skins.length){
-        skins=[
-          {id:"default",name:"Default",desc:"Skin awal",type:"emoji",value:"🏎",unlockLevel:1,status:"ACTIVE"}
-        ];
+        list.innerHTML = "<p style='color:#ff6b8a;'>Skin kosong di GAS.</p>";
+        return;
       }
 
-      if(!skins.find(s=>s.id===selectedSkinId)){
-        selectedSkinId=skins[0].id;
+      const savedUser = getSavedUser();
+      const savedSkinId = savedUser.selectedSkinId || savedUser.skinId || savedUser.selectedSkin || savedUser.skin || "";
+
+      if(savedSkinId){
+        selectedSkinId = savedSkinId;
+      }
+
+      if(!skins.find(s => s.skinId === selectedSkinId)){
+        selectedSkinId = skins[0].skinId;
       }
 
       renderSkins();
       renderPreview();
     }else{
-      list.innerHTML="<p style='color:#ff6b8a;'>Gagal memuat skin.</p>";
+      list.innerHTML = "<p style='color:#ff6b8a;'>Gagal memuat skin.</p>";
     }
   }catch(err){
-    list.innerHTML="<p style='color:#ff6b8a;'>Gagal connect ke GAS SKIN.</p>";
+    console.log("Gagal connect ke GAS SKIN:", err);
+    list.innerHTML = "<p style='color:#ff6b8a;'>Gagal connect ke GAS SKIN.</p>";
   }
 }
 
 function getUserLevel(){
   try{
-    const user=JSON.parse(localStorage.getItem(STORAGE_KEY));
-    return Number(user.level || 1);
+    const user = JSON.parse(localStorage.getItem(STORAGE_KEY)) || {};
+    return Number(user.level || user.Level || 1);
   }catch(err){
     return 1;
   }
 }
 
+function getSavedUser(){
+  try{
+    return JSON.parse(localStorage.getItem(STORAGE_KEY)) || {};
+  }catch(err){
+    return {};
+  }
+}
+
 function renderSkins(){
-  const list=document.getElementById("skinList");
-  list.innerHTML="";
+  const list = document.getElementById("skinList");
+  list.innerHTML = "";
 
-  skins.forEach(s=>{
-    const locked=isLocked(s);
-    const el=document.createElement("div");
-    el.className="skin-card"+(s.id===selectedSkinId?" active":"")+(locked?" locked":"");
-    el.onclick=()=>selectSkin(s.id);
+  skins.forEach(s => {
+    const locked = isLocked(s);
+    const el = document.createElement("div");
 
-    el.innerHTML=`
+    el.className = "skin-card" + (s.skinId === selectedSkinId ? " active" : "") + (locked ? " locked" : "");
+    el.onclick = () => selectSkin(s.skinId);
+
+    el.innerHTML = `
       <div class="skin-image">${renderSkin(s)}</div>
-      <h4>${escapeHtml(s.name || s.id)}</h4>
+      <h4>${escapeHtml(s.skinName || s.skinId)}</h4>
       <div class="skin-level">Level ${Number(s.unlockLevel || 1)}</div>
       ${locked ? '<div class="skin-lock">🔒</div>' : ''}
     `;
@@ -277,71 +327,75 @@ function renderSkins(){
 }
 
 function selectSkin(id){
-  selectedSkinId=id;
+  selectedSkinId = id;
   renderSkins();
   renderPreview();
 
-  const notice=document.getElementById("notice");
-  notice.textContent="";
-  notice.className="notice";
+  const notice = document.getElementById("notice");
+  notice.textContent = "";
+  notice.className = "notice";
 }
 
 function renderPreview(){
-  const s=getSkin();
-
+  const s = getSkin();
   if(!s) return;
 
-  document.getElementById("previewCar").innerHTML=renderSkin(s);
-  document.getElementById("previewName").textContent=s.name || s.id;
-  document.getElementById("previewDesc").textContent=s.desc || "";
+  document.getElementById("previewCar").innerHTML = renderSkin(s);
+  document.getElementById("previewName").textContent = s.skinName || s.skinId || "Default";
+  document.getElementById("previewDesc").textContent = s.type || "";
 
-  const useBtn=document.getElementById("useBtn");
+  const useBtn = document.getElementById("useBtn");
 
   if(isLocked(s)){
-    useBtn.disabled=true;
-    document.getElementById("notice").textContent="Skin terkunci. Butuh Level "+Number(s.unlockLevel || 1)+".";
-    document.getElementById("notice").className="notice error";
+    useBtn.disabled = true;
+    document.getElementById("notice").textContent = "Skin terkunci. Butuh Level " + Number(s.unlockLevel || 1) + ".";
+    document.getElementById("notice").className = "notice error";
   }else{
-    useBtn.disabled=false;
+    useBtn.disabled = false;
   }
 }
 
 function renderSkin(s){
-  if(String(s.type || "").toLowerCase()==="image"){
-    return `<img src="${s.value}" alt="${escapeHtml(s.name || s.id)}">`;
+  const imageUrl = s.imageUrl || "";
+
+  if(imageUrl){
+    return `<img src="${escapeHtml(imageUrl)}" alt="${escapeHtml(s.skinName || s.skinId || "skin")}">`;
   }
 
-  return s.value || "🏎";
+  return "🏎";
 }
 
 function useSkin(){
-  const s=getSkin();
-
+  const s = getSkin();
   if(!s) return;
 
-  const notice=document.getElementById("notice");
+  const notice = document.getElementById("notice");
 
   if(isLocked(s)){
-    notice.textContent="Skin terkunci. Butuh Level "+Number(s.unlockLevel || 1)+".";
-    notice.className="notice error";
+    notice.textContent = "Skin terkunci. Butuh Level " + Number(s.unlockLevel || 1) + ".";
+    notice.className = "notice error";
     return;
   }
 
-  localStorage.setItem(SELECTED_SKIN_KEY,selectedSkinId);
+  selectedSkinId = s.skinId;
 
-  let user=null;
+  localStorage.setItem(SELECTED_SKIN_KEY, selectedSkinId);
 
-  try{
-    user=JSON.parse(localStorage.getItem(STORAGE_KEY));
-  }catch(err){}
+  let user = getSavedUser();
 
-  if(!user) user={};
+  user.skinId = s.skinId;
+  user.selectedSkin = s.skinId;
+  user.selectedSkinId = s.skinId;
+  user.skinImage = s.imageUrl;
+  user.selectedSkinImage = s.imageUrl;
 
-  user.selectedSkin=selectedSkinId;
-  localStorage.setItem(STORAGE_KEY,JSON.stringify(user));
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(user));
 
-  notice.textContent="Skin dipakai ✓";
-  notice.className="notice";
+  notice.textContent = "Skin dipakai ✓";
+  notice.className = "notice";
+
+  renderSkins();
+  renderPreview();
 }
 
 function isLocked(s){
@@ -349,11 +403,11 @@ function isLocked(s){
 }
 
 function getSkin(){
-  return skins.find(s=>s.id===selectedSkinId) || skins[0];
+  return skins.find(s => s.skinId === selectedSkinId) || skins[0];
 }
 
 function escapeHtml(value){
-  return String(value)
+  return String(value || "")
     .replace(/&/g,"&amp;")
     .replace(/</g,"&lt;")
     .replace(/>/g,"&gt;")
@@ -362,7 +416,7 @@ function escapeHtml(value){
 }
 
 function goLobby(){
-  window.location.href="https://wpconvert.github.io/punyakita/lobby/index.html";
+  window.location.href = "https://wpconvert.github.io/punyakita/lobby/index.html";
 }
 </script>
 
