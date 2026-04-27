@@ -173,6 +173,7 @@
       display: block;
       pointer-events: none;
       user-select: none;
+      image-rendering: pixelated;
     }
 
     .finish-line {
@@ -316,21 +317,10 @@
     }
 
     @media (max-width: 700px) {
-      body {
-        padding: 10px;
-      }
-
-      .app {
-        padding: 14px;
-      }
-
-      .title {
-        font-size: 19px;
-      }
-
-      .start-panel {
-        width: 100%;
-      }
+      body { padding: 10px; }
+      .app { padding: 14px; }
+      .title { font-size: 19px; }
+      .start-panel { width: 100%; }
 
       .lane-name {
         width: 90px;
@@ -349,9 +339,7 @@
         height: 40px;
       }
 
-      .finish-line {
-        right: 48px;
-      }
+      .finish-line { right: 48px; }
 
       .lane-position {
         right: 4px;
@@ -460,7 +448,8 @@
 
   <script>
     const STORAGE_KEY = "typingRaceUser";
-    const SKIN_GAS_URL = "https://script.google.com/macros/s/AKfycbwxbDTMY3rAT7-6RdtutUfeOjVf0SKb6L-Ztfp6cK4AUuq4ziiOD65c-EqZk9LwJrM/exec";
+    const SELECTED_SKIN_KEY = "selectedTypingSkin";
+    const SKIN_GAS_URL = "https://script.google.com/macros/s/AKfycbzaV9UAd0p3a-IdlhXvhnPp4wU7vZLXE7nmbiPOSovAhe_uSbEKUQQ5foCUVVaIbWQBtQ/exec";
 
     const texts = [
       "Siapa takut menjadi perawan tua? Hari gini, menikah bukan lagi sekedar institusi romantis nggak jelas. Menikah adalah kerjasama dua pihak yang menguntungkan.",
@@ -534,7 +523,6 @@
 
     function loadPlayerName() {
       const saved = localStorage.getItem(STORAGE_KEY);
-
       if (!saved) return;
 
       try {
@@ -548,37 +536,29 @@
         const res = await fetch(SKIN_GAS_URL + "?t=" + Date.now());
         const json = await res.json();
 
-        const skins = normalizeSkins(json);
-        const level1DefaultSkins = skins.filter((skin) => {
-          const level = String(skin.level || skin.Level || skin.LEVEL || "1").trim();
-          const type = String(skin.type || skin.Type || skin.TYPE || skin.category || skin.Category || "").toLowerCase();
-          const status = String(skin.status || skin.Status || skin.STATUS || "").toLowerCase();
+        const skins = normalizeSkins(json)
+          .map(normalizeSkin)
+          .filter(s => String(s.status || "ACTIVE").toUpperCase() === "ACTIVE");
 
-          return level === "1" && (
-            type.includes("default") ||
-            status.includes("default") ||
-            skin.default === true ||
-            skin.isDefault === true ||
-            skin.defaults === true ||
-            type === ""
-          );
+        if (!skins.length) return;
+
+        const botPool = skins.filter(s => {
+          return Number(s.unlockLevel) === 1 && String(s.type || "").toLowerCase() === "default";
         });
 
-        const allLevel1 = skins.filter((skin) => {
-          const level = String(skin.level || skin.Level || skin.LEVEL || "1").trim();
-          return level === "1";
-        });
+        const finalBotPool = botPool.length ? botPool : skins.filter(s => Number(s.unlockLevel) === 1);
 
-        const botPool = level1DefaultSkins.length ? level1DefaultSkins : allLevel1;
+        const botSkin1 = getRandomSkin(finalBotPool);
+        const botSkin2 = getRandomSkin(finalBotPool);
 
-        const botSkin1 = getRandomSkin(botPool);
-        const botSkin2 = getRandomSkin(botPool);
+        if (botSkin1) setCarSkin(bot1, botSkin1.imageUrl, "🚗");
+        if (botSkin2) setCarSkin(bot2, botSkin2.imageUrl, "🚙");
 
-        if (botSkin1) setCarSkin(bot1, getSkinImage(botSkin1), "🚗");
-        if (botSkin2) setCarSkin(bot2, getSkinImage(botSkin2), "🚙");
+        const playerSkin = findPlayerSelectedSkin(skins) || finalBotPool[0] || skins[0];
 
-        const playerSkin = findPlayerSelectedSkin(skins) || getRandomSkin(botPool);
-        if (playerSkin) setCarSkin(playerCar, getSkinImage(playerSkin), "🏎️");
+        if (playerSkin) {
+          setCarSkin(playerCar, playerSkin.imageUrl, "🏎️");
+        }
 
       } catch (err) {
         console.log("Gagal load skin GAS:", err);
@@ -587,77 +567,127 @@
 
     function normalizeSkins(json) {
       if (Array.isArray(json)) return json;
-
       if (json && Array.isArray(json.data)) return json.data;
       if (json && Array.isArray(json.skins)) return json.skins;
       if (json && json.status === "success" && Array.isArray(json.result)) return json.result;
-
       return [];
     }
 
-    function getSkinImage(skin) {
-      return (
-        skin.image ||
-        skin.Image ||
-        skin.IMAGE ||
-        skin.img ||
-        skin.Img ||
-        skin.url ||
-        skin.URL ||
-        skin.link ||
-        skin.Link ||
-        skin.skin ||
-        skin.Skin ||
-        ""
-      );
-    }
+    function normalizeSkin(raw) {
+      const lower = {};
 
-    function getSkinId(skin) {
-      return String(
-        skin.id ||
-        skin.ID ||
-        skin.skinId ||
-        skin.skin_id ||
-        skin.name ||
-        skin.Name ||
-        skin.nama ||
+      Object.keys(raw || {}).forEach(key => {
+        lower[String(key).toLowerCase().replace(/\s/g, "").trim()] = raw[key];
+      });
+
+      const skinId = String(
+        raw.skinId ||
+        raw.id ||
+        lower.skinid ||
+        lower.id ||
         ""
       ).trim();
+
+      const skinName = String(
+        raw.skinName ||
+        raw.name ||
+        lower.skinname ||
+        lower.name ||
+        skinId
+      ).trim();
+
+      const type = String(
+        raw.type ||
+        lower.type ||
+        ""
+      ).trim();
+
+      const imageUrl = String(
+        raw.imageUrl ||
+        raw.imageurl ||
+        raw.image ||
+        raw.img ||
+        raw.url ||
+        raw.value ||
+        lower.imageurl ||
+        lower.image ||
+        lower.img ||
+        lower.url ||
+        lower.value ||
+        ""
+      ).trim();
+
+      let unlockLevel = Number(
+        raw.unlockLevel ||
+        raw.unlocklevel ||
+        raw.level ||
+        lower.unlocklevel ||
+        lower.level ||
+        ""
+      );
+
+      if (!unlockLevel || isNaN(unlockLevel)) {
+        const match = type.match(/\d+/);
+        unlockLevel = match ? Number(match[0]) : 1;
+      }
+
+      const status = String(
+        raw.status ||
+        lower.status ||
+        "ACTIVE"
+      ).trim();
+
+      return {
+        skinId,
+        skinName,
+        type,
+        imageUrl,
+        unlockLevel,
+        status
+      };
     }
 
     function findPlayerSelectedSkin(skins) {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      if (!saved) return null;
+      let user = {};
 
       try {
-        const user = JSON.parse(saved);
-        const selectedSkinId = String(
-          user.selectedSkinId ||
-          user.skinId ||
-          user.selectedSkin ||
-          user.skin ||
-          ""
-        ).trim();
+        user = JSON.parse(localStorage.getItem(STORAGE_KEY)) || {};
+      } catch (err) {}
 
-        const selectedSkinImage = String(
-          user.selectedSkinImage ||
-          user.skinImage ||
-          user.image ||
-          ""
-        ).trim();
+      const selectedSkinId = String(
+        user.selectedSkinId ||
+        user.skinId ||
+        user.selectedSkin ||
+        user.skin ||
+        localStorage.getItem(SELECTED_SKIN_KEY) ||
+        ""
+      ).trim();
 
-        if (selectedSkinImage) {
-          return { image: selectedSkinImage };
-        }
+      const selectedSkinImage = String(
+        user.selectedSkinImage ||
+        user.skinImage ||
+        ""
+      ).trim();
 
-        if (selectedSkinId) {
-          return skins.find((skin) => getSkinId(skin) === selectedSkinId) || null;
-        }
-
-        return null;
-      } catch (err) {
-        return null;
+      if (selectedSkinId) {
+        const found = skins.find(s => s.skinId === selectedSkinId);
+        if (found) return found;
       }
+
+      if (selectedSkinImage) {
+        const foundByImage = skins.find(s => s.imageUrl === selectedSkinImage);
+        if (foundByImage) return foundByImage;
+        return {
+          skinId: "custom",
+          skinName: "custom",
+          type: "custom",
+          imageUrl: selectedSkinImage,
+          unlockLevel: 1,
+          status: "ACTIVE"
+        };
+      }
+
+      return null;
     }
 
     function getRandomSkin(list) {
