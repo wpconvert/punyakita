@@ -17,19 +17,21 @@
         radial-gradient(circle at top left, rgba(0, 255, 255, 0.14), transparent 35%),
         radial-gradient(circle at bottom right, rgba(0, 110, 255, 0.18), transparent 35%),
         #07111f;
-      padding: 18px;
+      padding: 14px;
       color: #111827;
-      overflow-x: auto;
+      overflow-x: hidden;
     }
 
     .app {
-      width: 1380px;
-      min-width: 1380px;
+      width: 100%;
+      max-width: 1380px;
+      margin: 0 auto;
       background: #f8fbff;
       border: 1px solid #c7d9ea;
       border-radius: 10px;
       padding: 22px;
       box-shadow: 0 0 28px rgba(0, 174, 255, 0.15);
+      overflow: hidden;
     }
 
     .top-head {
@@ -37,6 +39,7 @@
       align-items: center;
       gap: 18px;
       margin-bottom: 12px;
+      flex-wrap: wrap;
     }
 
     .title {
@@ -56,7 +59,14 @@
       background: rgba(255, 255, 255, 0.35);
     }
 
-    .room-info { margin-bottom: 12px; color: #4c7c8e; font-size: 14px; font-weight: bold; }
+    .room-info {
+      margin-bottom: 12px;
+      color: #4c7c8e;
+      font-size: 14px;
+      font-weight: bold;
+      overflow-wrap: anywhere;
+    }
+
     .room-info span { color: #2f55a4; }
 
     .start-panel {
@@ -68,7 +78,8 @@
       border: 1px solid #bdd6e7;
       border-radius: 9px;
       padding: 12px 14px;
-      width: fit-content;
+      width: 100%;
+      flex-wrap: wrap;
     }
 
     .light-box { display: flex; align-items: center; gap: 8px; background: #111; padding: 7px 10px; border-radius: 8px; }
@@ -77,7 +88,14 @@
     .light.yellow.active { background: #ffd23c; box-shadow: 0 0 12px rgba(255, 210, 60, 0.9); }
     .light.green.active { background: #38e87d; box-shadow: 0 0 12px rgba(56, 232, 125, 0.9); }
 
-    .ready-text { color: #2f55a4; font-size: 17px; font-weight: bold; min-width: 280px; }
+    .ready-text {
+      color: #2f55a4;
+      font-size: 17px;
+      font-weight: bold;
+      min-width: 220px;
+      flex: 1;
+    }
+
     .count-number { color: #111; font-size: 28px; font-family: monospace; font-weight: bold; min-width: 52px; text-align: right; }
 
     .start-btn, .ready-btn, .join-btn, .leave-btn, .copy-btn {
@@ -88,6 +106,7 @@
       font-size: 15px;
       font-weight: bold;
       cursor: pointer;
+      white-space: nowrap;
     }
 
     .start-btn { background: #238bd6; }
@@ -102,13 +121,14 @@
     .leave-btn { background: #ff4d6d; }
     .copy-btn { background: #6b7cff; }
 
-    .race-top { margin-bottom: 12px; }
+    .race-top { margin-bottom: 12px; width: 100%; }
 
     .lane {
       position: relative;
       height: 62px;
       border-bottom: 2px dashed #f0b629;
       overflow: hidden;
+      width: 100%;
     }
 
     .lane-name {
@@ -173,6 +193,8 @@
       border-radius: 9px;
       padding: 18px;
       margin-bottom: 22px;
+      width: 100%;
+      overflow: hidden;
     }
 
     .target-text {
@@ -182,7 +204,10 @@
       color: #000;
       margin-bottom: 18px;
       white-space: pre-wrap;
+      overflow-wrap: anywhere;
+      word-break: break-word;
       min-height: 96px;
+      max-width: 100%;
     }
 
     .target-placeholder { color: #7b91a3; font-family: Arial, sans-serif; font-size: 17px; }
@@ -240,6 +265,16 @@
 
     .stat-box strong { display: block; color: #2f55a4; font-size: 26px; margin-bottom: 4px; }
     .stat-box span { color: #607789; font-size: 13px; }
+
+    @media (max-width: 700px) {
+      body { padding: 6px; }
+      .app { padding: 14px; }
+      .title { font-size: 20px; }
+      .host-box { min-width: 100%; }
+      .target-text { font-size: 18px; }
+      .input-box { font-size: 18px; }
+      .result-grid { grid-template-columns: repeat(2, 1fr); }
+    }
   </style>
 </head>
 
@@ -357,7 +392,6 @@
     let raceTimer = null;
 
     const trackStart = 175;
-    const maxMove = 1040;
 
     const target = document.getElementById("targetText");
     const input = document.getElementById("typingInput");
@@ -370,6 +404,10 @@
     input.addEventListener("paste", (e) => e.preventDefault());
     input.addEventListener("drop", (e) => e.preventDefault());
 
+    window.addEventListener("resize", () => {
+      renderPlayers(currentPlayers);
+    });
+
     document.addEventListener("DOMContentLoaded", () => {
       document.getElementById("roomIdText").textContent = roomId;
       document.getElementById("roomLinkText").textContent = window.location.href;
@@ -377,6 +415,11 @@
       listenRoom();
       renderTextPlaceholder();
     });
+
+    function getMaxMove() {
+      const width = lanes.clientWidth || document.querySelector(".app").clientWidth || 1000;
+      return Math.max(240, width - trackStart - 120);
+    }
 
     function getRoomId() {
       const params = new URLSearchParams(window.location.search);
@@ -536,7 +579,7 @@
 
       document.getElementById("joinBtn").style.display = !hasJoined && (status === "waiting" || status === "finished") ? "inline-block" : "none";
       document.getElementById("leaveBtn").style.display = hasJoined ? "inline-block" : "none";
-      document.getElementById("readyBtn").style.display = hasJoined && status === "waiting" ? "inline-block" : "none";
+      document.getElementById("readyBtn").style.display = hasJoined && !isHost && status === "waiting" ? "inline-block" : "none";
 
       const readyBtn = document.getElementById("readyBtn");
       readyBtn.textContent = isReady ? "Ready ✓" : "Ready";
@@ -548,7 +591,8 @@
     function updateStartButton() {
       const btn = document.getElementById("startBtn");
       const list = Object.values(currentPlayers);
-      const allReady = list.length > 0 && list.every((p) => p.ready);
+      const playersNeedReady = list.filter((p) => p.id !== currentRoomData.hostId);
+      const allReady = playersNeedReady.length === 0 || playersNeedReady.every((p) => p.ready);
 
       if (!isHost) {
         btn.disabled = true;
@@ -647,11 +691,17 @@
 
     function updateWaitingText() {
       const list = Object.values(currentPlayers);
-      const readyCount = list.filter((p) => p.ready).length;
-      const total = list.length;
+      const playersNeedReady = list.filter((p) => p.id !== currentRoomData.hostId);
+      const readyCount = playersNeedReady.filter((p) => p.ready).length;
+      const total = playersNeedReady.length;
+
+      if (list.length === 0) {
+        document.getElementById("readyText").textContent = "Belum ada player.";
+        return;
+      }
 
       if (total === 0) {
-        document.getElementById("readyText").textContent = "Belum ada player.";
+        document.getElementById("readyText").textContent = "Host bisa mulai permainan.";
         return;
       }
 
@@ -663,13 +713,20 @@
     }
 
     function renderPlayers(players) {
+      const maxMove = getMaxMove();
       const playerList = Object.values(players).sort((a, b) => Number(a.joinedAt || 0) - Number(b.joinedAt || 0));
       lanes.innerHTML = "";
 
       playerList.forEach((player) => {
         const lane = document.createElement("div");
         lane.className = "lane";
-        const readyIcon = player.ready ? "✅" : "❌";
+
+        let readyIcon = player.ready ? "✅" : "❌";
+
+        if (currentRoomData && player.id === currentRoomData.hostId) {
+          readyIcon = "👑";
+        }
+
         const progress = Number(player.progress || 0);
         const left = trackStart + progress * maxMove;
 
@@ -686,7 +743,7 @@
     }
 
     function toggleReady() {
-      if (!hasJoined || !currentRoomData || currentRoomData.status !== "waiting") return;
+      if (!hasJoined || !currentRoomData || currentRoomData.status !== "waiting" || isHost) return;
 
       myPlayerRef.update({
         ready: !isReady,
@@ -698,7 +755,8 @@
       if (!currentRoomData || !isHost || currentRoomData.status !== "waiting") return;
 
       const list = Object.values(currentPlayers);
-      const allReady = list.length > 0 && list.every((p) => p.ready);
+      const playersNeedReady = list.filter((p) => p.id !== currentRoomData.hostId);
+      const allReady = playersNeedReady.length === 0 || playersNeedReady.every((p) => p.ready);
 
       if (!allReady) {
         document.getElementById("readyText").textContent = "Semua player harus ready dulu.";
@@ -723,7 +781,7 @@
           progress: 0,
           correctIndex: 0,
           cpm: 0,
-          ready: false,
+          ready: id === currentRoomData.hostId,
           status: "countdown",
           position: "",
           timedOut: false
@@ -1011,7 +1069,7 @@
           progress: 0,
           correctIndex: 0,
           cpm: 0,
-          ready: false,
+          ready: id === currentRoomData.hostId,
           status: "waiting",
           position: "",
           timedOut: false
