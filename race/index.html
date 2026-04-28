@@ -468,6 +468,7 @@
     const STORAGE_KEY = "typingRaceUser";
     const SELECTED_SKIN_KEY = "selectedTypingSkin";
     const SKIN_GAS_URL = "https://script.google.com/macros/s/AKfycbzaV9UAd0p3a-IdlhXvhnPp4wU7vZLXE7nmbiPOSovAhe_uSbEKUQQ5foCUVVaIbWQBtQ/exec";
+    const USER_GAS_URL = "https://script.google.com/macros/s/AKfycbxp6-xIPz-JHHeFKwICYmPBnyb0IXqK-x7P9DtwxPtu9-beT7k5MufP5hKg3XFK6mhQ/exec";
 
     const texts = [
       "Siapa takut menjadi perawan tua? Hari gini, menikah bukan lagi sekedar institusi romantis nggak jelas. Menikah adalah kerjasama dua pihak yang menguntungkan.",
@@ -738,6 +739,34 @@
       element.appendChild(img);
     }
 
+    async function saveExpToAccount(exp){
+      let user = {};
+
+      try{
+        user = JSON.parse(localStorage.getItem(STORAGE_KEY)) || {};
+      }catch(err){}
+
+      if(!user.username || user.type !== "user") return;
+
+      try{
+        const res = await fetch(USER_GAS_URL + "?action=addExp&username=" + encodeURIComponent(user.username) + "&exp=" + encodeURIComponent(exp));
+        const data = await res.json();
+
+        if(data.status === "success" && data.user){
+          user.level = data.user.level;
+          user.exp = data.user.exp;
+          user.selectedSkin = data.user.selectedSkin;
+          user.skinId = data.user.selectedSkin;
+          user.selectedSkinId = data.user.selectedSkin;
+
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(user));
+          localStorage.setItem(SELECTED_SKIN_KEY, data.user.selectedSkin);
+        }
+      }catch(err){
+        console.log("Gagal simpan EXP:", err);
+      }
+    }
+
     function renderText(value) {
       target.innerHTML = "";
 
@@ -938,6 +967,8 @@
 
       const bonusPosition = position === 1 ? 50 : position === 2 ? 25 : 10;
       const exp = Math.floor(wpm + accuracy / 2 + bonusPosition);
+
+      saveExpToAccount(exp);
 
       document.getElementById("resultWpm").textContent = wpm;
       document.getElementById("resultAccuracy").textContent = accuracy + "%";
