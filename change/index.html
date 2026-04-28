@@ -22,200 +22,159 @@
       background:#07111f;
       color:#eaf6ff;
       padding:20px;
-      overflow-x:hidden;
     }
 
-    .app{width:100%;max-width:1300px;margin:auto}
-
-    .topbar{text-align:center;margin-bottom:20px;padding:15px;background:#0a192d;border-radius:12px}
-
-    .topbar h1{color:#64dfff;margin-bottom:10px}
-
-    .btn{padding:10px 15px;border:none;border-radius:8px;cursor:pointer;color:white;background:#009dff;font-weight:bold}
-    .btn:disabled{opacity:.5;cursor:not-allowed}
-    .btn-danger{background:#ff4d6d}
+    .app{max-width:1200px;margin:auto}
 
     .grid{display:grid;grid-template-columns:2fr 1fr;gap:20px}
 
-    .card{background:#0a192d;padding:20px;border-radius:12px;min-width:0}
+    .card{background:#0a192d;padding:20px;border-radius:12px}
 
-    .card h2{color:#64dfff;margin-bottom:10px}
-
-    .skin-list{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+    .skin-list{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
 
     .skin-card{
-      position:relative;
-      text-align:center;
-      padding:15px;
+      padding:10px;
       background:#041020;
       border-radius:10px;
+      text-align:center;
       cursor:pointer;
-      min-height:130px;
-      overflow:hidden;
-      border:1px solid rgba(100,223,255,.15);
     }
 
     .skin-card.active{outline:2px solid #4dffb8}
-    .skin-card.locked{opacity:.75}
-
-    .skin-lock{
-      position:absolute;
-      inset:0;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      background:rgba(0,0,0,.42);
-      font-size:34px;
-      z-index:2;
-    }
-
-    .skin-level{margin-top:6px;font-size:12px;color:#9db7cc}
-
-    .skin-image{
-      font-size:40px;
-      margin-bottom:8px;
-      height:70px;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-    }
 
     .skin-image img{
-      width:90px;
-      max-height:65px;
+      width:80px;
+      height:60px;
       object-fit:contain;
-      image-rendering:pixelated;
-      display:block;
-    }
-
-    .preview-area{text-align:center;margin-top:15px}
-
-    .road{
-      height:90px;
-      border-bottom:2px dashed #f0b629;
-      position:relative;
-      margin-bottom:15px;
-      overflow:hidden;
     }
 
     .preview-car{
-      position:absolute;
-      left:50%;
-      transform:translateX(-50%);
-      top:10px;
-      font-size:50px;
+      height:90px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
     }
 
     .preview-car img{
       width:120px;
-      max-height:75px;
-      object-fit:contain;
-      image-rendering:pixelated;
-      display:block;
     }
-
-    .notice{margin-top:10px;min-height:20px;color:#4dffb8;text-align:center;font-size:14px}
-    .notice.error{color:#ff6b8a}
   </style>
 </head>
 
 <body>
+
 <div class="app">
 
-  <div class="topbar">
-    <h1>UBAH SKIN</h1>
-    <button class="btn btn-danger" onclick="goLobby()">Kembali Lobby</button>
-  </div>
-
   <div class="grid">
+
     <div class="card">
       <h2>Pilihan Skin</h2>
-      <div class="skin-list" id="skinList"></div>
+      <div id="skinList" class="skin-list"></div>
     </div>
 
     <div class="card">
       <h2>Skin Dipakai</h2>
 
-      <div class="preview-area">
-        <div class="road">
-          <div class="preview-car" id="previewCar">
-            <span class="skin-loading">Loading skin...</span>
-          </div>
-        </div>
-
-        <h3 id="previewName">Memuat skin...</h3>
-        <p id="previewDesc">Mengambil data...</p>
+      <div class="preview-car" id="previewCar">
+        <span class="skin-loading">Loading skin...</span>
       </div>
 
-      <div class="notice" id="notice"></div>
+      <h3 id="previewName">Memuat...</h3>
 
-      <button class="btn" id="useBtn" onclick="useSkin()">Pakai Skin</button>
+      <button onclick="useSkin()">Pakai Skin</button>
     </div>
+
   </div>
+
 </div>
 
 <script>
-const STORAGE_KEY = "typingRaceUser";
-const SELECTED_SKIN_KEY = "selectedTypingSkin";
 const SKIN_GAS_URL = "https://script.google.com/macros/s/AKfycbzaV9UAd0p3a-IdlhXvhnPp4wU7vZLXE7nmbiPOSovAhe_uSbEKUQQ5foCUVVaIbWQBtQ/exec";
+const STORAGE_KEY = "typingRaceUser";
 
 let skins = [];
-let selectedSkinId = localStorage.getItem(SELECTED_SKIN_KEY) || "";
-let userLevel = 1;
+let selectedSkinId = "";
 
-document.addEventListener("DOMContentLoaded", () => {
-  loadSkins();
-});
+document.addEventListener("DOMContentLoaded", loadSkins);
 
 async function loadSkins(){
-  document.getElementById("previewCar").innerHTML='<span class="skin-loading">Loading skin...</span>';
-  document.getElementById("previewName").textContent="Memuat skin...";
-  document.getElementById("previewDesc").textContent="Mengambil data...";
+
+  document.getElementById("previewCar").innerHTML =
+    '<span class="skin-loading">Loading skin...</span>';
 
   try{
-    const res=await fetch(SKIN_GAS_URL + "?t=" + Date.now());
-    const data=await res.json();
+    const res = await fetch(SKIN_GAS_URL + "?t=" + Date.now());
+    const json = await res.json();
 
-    if(data.status==="success"){
-      skins=data.data;
-      selectedSkinId=skins[0].skinId;
-      renderPreview();
-    }
+    skins = json.data;
+
+    let user = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
+
+    selectedSkinId =
+      user.skinId ||
+      localStorage.getItem("selectedTypingSkin") ||
+      skins[0].skinId;
+
+    renderSkins();
+    renderPreview();
+
   }catch(e){
-    document.getElementById("previewCar").innerHTML="🏎";
+    console.log(e);
   }
+}
+
+function renderSkins(){
+  const list = document.getElementById("skinList");
+  list.innerHTML = "";
+
+  skins.forEach(s => {
+
+    const el = document.createElement("div");
+    el.className = "skin-card" + (s.skinId === selectedSkinId ? " active" : "");
+
+    el.onclick = () => {
+      selectedSkinId = s.skinId;
+      renderSkins();
+      renderPreview();
+    };
+
+    el.innerHTML = `
+      <div class="skin-image">
+        ${s.imageUrl ? `<img src="${s.imageUrl}">` : "🏎"}
+      </div>
+      <div>${s.skinName}</div>
+    `;
+
+    list.appendChild(el);
+  });
 }
 
 function renderPreview(){
-  const s=skins.find(x=>x.skinId===selectedSkinId);
-  if(!s)return;
+  const s = skins.find(x => x.skinId === selectedSkinId);
+  if(!s) return;
 
   if(s.imageUrl){
-    document.getElementById("previewCar").innerHTML=`<img src="${s.imageUrl}">`;
+    document.getElementById("previewCar").innerHTML =
+      `<img src="${s.imageUrl}">`;
   }else{
-    document.getElementById("previewCar").innerHTML="🏎";
+    document.getElementById("previewCar").innerHTML = "🏎";
   }
 
-  document.getElementById("previewName").textContent=s.skinName;
-  document.getElementById("previewDesc").textContent=s.type;
+  document.getElementById("previewName").textContent = s.skinName;
 }
 
 function useSkin(){
-  const s=skins.find(x=>x.skinId===selectedSkinId);
-  if(!s)return;
+  const s = skins.find(x => x.skinId === selectedSkinId);
+  if(!s) return;
 
-  localStorage.setItem(SELECTED_SKIN_KEY,s.skinId);
+  let user = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
 
-  let user=JSON.parse(localStorage.getItem(STORAGE_KEY)||"{}");
-  user.skinId=s.skinId;
-  user.skinImage=s.imageUrl;
-  localStorage.setItem(STORAGE_KEY,JSON.stringify(user));
+  user.skinId = s.skinId;
+  user.skinImage = s.imageUrl;
 
-  document.getElementById("notice").textContent="Skin dipakai ✓";
-}
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(user));
 
-function goLobby(){
-  window.location.href="https://wpconvert.github.io/punyakita/lobby/index.html";
+  alert("Skin dipakai ✓");
 }
 </script>
 
