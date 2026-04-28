@@ -355,6 +355,29 @@
         "gray-car"
       ).trim();
 
+      if (user.username && user.type === "user") {
+        try {
+          const profileRes = await fetch(GAS_URL + "?action=getProfile&username=" + encodeURIComponent(user.username) + "&t=" + Date.now());
+          const profileData = await profileRes.json();
+
+          if (profileData.status === "success" && profileData.user && profileData.user.selectedSkin) {
+            selectedSkinId = profileData.user.selectedSkin;
+
+            user.selectedSkin = selectedSkinId;
+            user.selectedSkinId = selectedSkinId;
+            user.skinId = selectedSkinId;
+            user.level = profileData.user.level || user.level || 1;
+            user.exp = profileData.user.exp !== undefined ? profileData.user.exp : (user.exp || 0);
+
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(user));
+            localStorage.setItem(SELECTED_SKIN_KEY, selectedSkinId);
+            updateUserUI(user);
+          }
+        } catch (err) {
+          console.log("Gagal ambil profile lobby:", err);
+        }
+      }
+
       let selectedSkinImage = String(
         user.selectedSkinImage ||
         user.skinImage ||
@@ -375,6 +398,10 @@
           selectedSkinName = found.skinName || found.skinId || selectedSkinName;
           selectedSkinImage = found.imageUrl || selectedSkinImage;
           selectedSkinLevel = Number(found.unlockLevel || 1);
+
+          user.skinImage = selectedSkinImage;
+          user.selectedSkinImage = selectedSkinImage;
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(user));
         }
       } catch (err) {}
 
@@ -395,11 +422,13 @@
         oldUser = JSON.parse(localStorage.getItem(STORAGE_KEY)) || {};
       } catch (err) {}
 
-      newUser.skinId = oldUser.skinId || oldUser.selectedSkinId || oldUser.selectedSkin || newUser.skinId || newUser.selectedSkin || "gray-car";
-      newUser.selectedSkin = oldUser.selectedSkin || oldUser.skinId || oldUser.selectedSkinId || newUser.selectedSkin || newUser.skinId || "gray-car";
-      newUser.selectedSkinId = oldUser.selectedSkinId || oldUser.skinId || oldUser.selectedSkin || newUser.selectedSkinId || newUser.skinId || "gray-car";
-      newUser.skinImage = oldUser.skinImage || oldUser.selectedSkinImage || newUser.skinImage || "";
-      newUser.selectedSkinImage = oldUser.selectedSkinImage || oldUser.skinImage || newUser.selectedSkinImage || "";
+      const serverSkin = newUser.selectedSkin || newUser.skinId || newUser.selectedSkinId || "";
+
+      newUser.skinId = serverSkin || oldUser.skinId || oldUser.selectedSkinId || oldUser.selectedSkin || "gray-car";
+      newUser.selectedSkin = serverSkin || oldUser.selectedSkin || oldUser.skinId || oldUser.selectedSkinId || "gray-car";
+      newUser.selectedSkinId = serverSkin || oldUser.selectedSkinId || oldUser.skinId || oldUser.selectedSkin || "gray-car";
+      newUser.skinImage = "";
+      newUser.selectedSkinImage = "";
 
       return newUser;
     }
@@ -548,7 +577,7 @@
 
     async function loadProfile(username) {
       try {
-        const res = await fetch(GAS_URL + "?action=getProfile&username=" + encodeURIComponent(username));
+        const res = await fetch(GAS_URL + "?action=getProfile&username=" + encodeURIComponent(username) + "&t=" + Date.now());
         const data = await res.json();
 
         if (data.status !== "success") {
@@ -576,6 +605,7 @@
 
     function logoutUser() {
       localStorage.removeItem(STORAGE_KEY);
+      localStorage.removeItem(SELECTED_SKIN_KEY);
       initUser();
       renderLobbySkin();
     }
