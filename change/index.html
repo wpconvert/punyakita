@@ -22,159 +22,475 @@
       background:#07111f;
       color:#eaf6ff;
       padding:20px;
+      overflow-x:hidden;
     }
 
-    .app{max-width:1200px;margin:auto}
+    .app{
+      width:100%;
+      max-width:1300px;
+      margin:auto;
+    }
 
-    .grid{display:grid;grid-template-columns:2fr 1fr;gap:20px}
+    .topbar{
+      text-align:center;
+      margin-bottom:20px;
+      padding:15px;
+      background:#0a192d;
+      border-radius:12px;
+    }
 
-    .card{background:#0a192d;padding:20px;border-radius:12px}
+    .topbar h1{
+      color:#64dfff;
+      margin-bottom:10px;
+    }
 
-    .skin-list{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+    .btn{
+      padding:10px 15px;
+      border:none;
+      border-radius:8px;
+      cursor:pointer;
+      color:white;
+      background:#009dff;
+      font-weight:bold;
+    }
+
+    .btn:disabled{
+      opacity:.5;
+      cursor:not-allowed;
+    }
+
+    .btn-danger{background:#ff4d6d}
+
+    .grid{
+      display:grid;
+      grid-template-columns:2fr 1fr;
+      gap:20px;
+    }
+
+    .card{
+      background:#0a192d;
+      padding:20px;
+      border-radius:12px;
+      min-width:0;
+    }
+
+    .card h2{
+      color:#64dfff;
+      margin-bottom:10px;
+    }
+
+    .skin-list{
+      display:grid;
+      grid-template-columns:repeat(3,1fr);
+      gap:12px;
+    }
 
     .skin-card{
-      padding:10px;
+      position:relative;
+      text-align:center;
+      padding:15px;
       background:#041020;
       border-radius:10px;
-      text-align:center;
       cursor:pointer;
+      min-height:130px;
+      overflow:hidden;
+      border:1px solid rgba(100,223,255,.15);
     }
 
-    .skin-card.active{outline:2px solid #4dffb8}
-
-    .skin-image img{
-      width:80px;
-      height:60px;
-      object-fit:contain;
+    .skin-card.active{
+      outline:2px solid #4dffb8;
     }
 
-    .preview-car{
-      height:90px;
+    .skin-card.locked{
+      opacity:.75;
+    }
+
+    .skin-lock{
+      position:absolute;
+      inset:0;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      background:rgba(0,0,0,.42);
+      font-size:34px;
+      z-index:2;
+    }
+
+    .skin-level{
+      margin-top:6px;
+      font-size:12px;
+      color:#9db7cc;
+    }
+
+    .skin-image{
+      font-size:40px;
+      margin-bottom:8px;
+      height:70px;
       display:flex;
       align-items:center;
       justify-content:center;
     }
 
+    .skin-image img{
+      width:90px;
+      max-height:65px;
+      object-fit:contain;
+      image-rendering:pixelated;
+      display:block;
+    }
+
+    .preview-area{
+      text-align:center;
+      margin-top:15px;
+    }
+
+    .road{
+      height:90px;
+      border-bottom:2px dashed #f0b629;
+      position:relative;
+      margin-bottom:15px;
+      overflow:hidden;
+    }
+
+    .preview-car{
+      position:absolute;
+      left:50%;
+      transform:translateX(-50%);
+      top:10px;
+      font-size:50px;
+    }
+
     .preview-car img{
       width:120px;
+      max-height:75px;
+      object-fit:contain;
+      image-rendering:pixelated;
+      display:block;
+    }
+
+    .notice{
+      margin-top:10px;
+      min-height:20px;
+      color:#4dffb8;
+      text-align:center;
+      font-size:14px;
+    }
+
+    .notice.error{
+      color:#ff6b8a;
     }
   </style>
 </head>
 
 <body>
-
 <div class="app">
 
-  <div class="grid">
+  <div class="topbar">
+    <h1>UBAH SKIN</h1>
+    <button class="btn btn-danger" onclick="goLobby()">Kembali Lobby</button>
+  </div>
 
+  <div class="grid">
     <div class="card">
       <h2>Pilihan Skin</h2>
-      <div id="skinList" class="skin-list"></div>
+      <div class="skin-list" id="skinList"></div>
     </div>
 
     <div class="card">
       <h2>Skin Dipakai</h2>
 
-      <div class="preview-car" id="previewCar">
-        <span class="skin-loading">Loading skin...</span>
+      <div class="preview-area">
+        <div class="road">
+          <div class="preview-car" id="previewCar">
+            <span class="skin-loading">Loading skin...</span>
+          </div>
+        </div>
+
+        <h3 id="previewName">Memuat skin...</h3>
+        <p id="previewDesc">Mengambil data...</p>
       </div>
 
-      <h3 id="previewName">Memuat...</h3>
+      <div class="notice" id="notice"></div>
 
-      <button onclick="useSkin()">Pakai Skin</button>
+      <button class="btn" id="useBtn" onclick="useSkin()">Pakai Skin</button>
     </div>
-
   </div>
-
 </div>
 
 <script>
-const SKIN_GAS_URL = "https://script.google.com/macros/s/AKfycbzaV9UAd0p3a-IdlhXvhnPp4wU7vZLXE7nmbiPOSovAhe_uSbEKUQQ5foCUVVaIbWQBtQ/exec";
 const STORAGE_KEY = "typingRaceUser";
+const SELECTED_SKIN_KEY = "selectedTypingSkin";
+const SKIN_GAS_URL = "https://script.google.com/macros/s/AKfycbzaV9UAd0p3a-IdlhXvhnPp4wU7vZLXE7nmbiPOSovAhe_uSbEKUQQ5foCUVVaIbWQBtQ/exec";
 
 let skins = [];
-let selectedSkinId = "";
+let selectedSkinId = localStorage.getItem(SELECTED_SKIN_KEY) || "";
+let userLevel = getUserLevel();
 
-document.addEventListener("DOMContentLoaded", loadSkins);
+document.addEventListener("DOMContentLoaded", () => {
+  loadSkins();
+});
 
 async function loadSkins(){
+  const list=document.getElementById("skinList");
+  list.innerHTML="<p style='color:#9db7cc;'>Memuat skin...</p>";
 
-  document.getElementById("previewCar").innerHTML =
-    '<span class="skin-loading">Loading skin...</span>';
+  document.getElementById("previewCar").innerHTML='<span class="skin-loading">Loading skin...</span>';
+  document.getElementById("previewName").textContent="Memuat skin...";
+  document.getElementById("previewDesc").textContent="Mengambil data...";
 
   try{
-    const res = await fetch(SKIN_GAS_URL + "?t=" + Date.now());
-    const json = await res.json();
+    const res=await fetch(SKIN_GAS_URL + "?t=" + Date.now());
+    const data=await res.json();
 
-    skins = json.data;
+    if(data.status==="success" && Array.isArray(data.data)){
+      skins=data.data
+        .map(normalizeSkin)
+        .filter(s=>String(s.status || "ACTIVE").toUpperCase()==="ACTIVE");
 
-    let user = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
+      if(!skins.length){
+        list.innerHTML="<p style='color:#ff6b8a;'>Skin kosong di GAS.</p>";
+        return;
+      }
 
-    selectedSkinId =
-      user.skinId ||
-      localStorage.getItem("selectedTypingSkin") ||
-      skins[0].skinId;
+      const savedUser=getSavedUser();
+      const savedSkinId=savedUser.selectedSkinId || savedUser.skinId || savedUser.selectedSkin || savedUser.skin || "";
 
-    renderSkins();
-    renderPreview();
+      if(savedSkinId){
+        selectedSkinId=savedSkinId;
+      }
 
-  }catch(e){
-    console.log(e);
+      if(!skins.find(s=>s.skinId===selectedSkinId)){
+        selectedSkinId=skins[0].skinId;
+      }
+
+      renderSkins();
+      renderPreview();
+    }else{
+      list.innerHTML="<p style='color:#ff6b8a;'>Gagal memuat skin.</p>";
+    }
+  }catch(err){
+    console.log("Gagal connect ke GAS SKIN:",err);
+    list.innerHTML="<p style='color:#ff6b8a;'>Gagal connect ke GAS SKIN.</p>";
+    document.getElementById("previewCar").innerHTML="🏎";
+    document.getElementById("previewName").textContent="Default";
+    document.getElementById("previewDesc").textContent="Skin awal";
+  }
+}
+
+function normalizeSkin(raw){
+  const lower={};
+
+  Object.keys(raw || {}).forEach(key=>{
+    lower[String(key).toLowerCase().replace(/\s/g,"").trim()] = raw[key];
+  });
+
+  const skinId=String(
+    raw.skinId ||
+    raw.id ||
+    lower.skinid ||
+    lower.id ||
+    ""
+  ).trim();
+
+  const skinName=String(
+    raw.skinName ||
+    raw.name ||
+    lower.skinname ||
+    lower.name ||
+    skinId
+  ).trim();
+
+  const type=String(
+    raw.type ||
+    lower.type ||
+    ""
+  ).trim();
+
+  const status=String(
+    raw.status ||
+    lower.status ||
+    "ACTIVE"
+  ).trim();
+
+  let imageUrl=String(
+    raw.imageUrl ||
+    raw.imageurl ||
+    raw.image ||
+    raw.img ||
+    raw.url ||
+    raw.value ||
+    lower.imageurl ||
+    lower.image ||
+    lower.img ||
+    lower.url ||
+    lower.value ||
+    ""
+  ).trim();
+
+  if(!imageUrl){
+    Object.keys(raw || {}).forEach(key=>{
+      const val=String(raw[key] || "").trim();
+      if(!imageUrl && val.startsWith("http")){
+        imageUrl=val;
+      }
+    });
+  }
+
+  let unlockLevel=Number(
+    raw.unlockLevel ||
+    raw.unlocklevel ||
+    raw.level ||
+    lower.unlocklevel ||
+    lower.level ||
+    ""
+  );
+
+  if(!unlockLevel || isNaN(unlockLevel)){
+    const match=type.match(/\d+/);
+    unlockLevel=match ? Number(match[0]) : 1;
+  }
+
+  return {
+    skinId: skinId,
+    skinName: skinName,
+    type: type,
+    imageUrl: imageUrl,
+    unlockLevel: unlockLevel,
+    status: status
+  };
+}
+
+function getUserLevel(){
+  try{
+    const user=JSON.parse(localStorage.getItem(STORAGE_KEY)) || {};
+    return Number(user.level || user.Level || 1);
+  }catch(err){
+    return 1;
+  }
+}
+
+function getSavedUser(){
+  try{
+    return JSON.parse(localStorage.getItem(STORAGE_KEY)) || {};
+  }catch(err){
+    return {};
   }
 }
 
 function renderSkins(){
-  const list = document.getElementById("skinList");
-  list.innerHTML = "";
+  const list=document.getElementById("skinList");
+  list.innerHTML="";
 
-  skins.forEach(s => {
+  skins.forEach(s=>{
+    const locked=isLocked(s);
+    const el=document.createElement("div");
 
-    const el = document.createElement("div");
-    el.className = "skin-card" + (s.skinId === selectedSkinId ? " active" : "");
+    el.className="skin-card"+(s.skinId===selectedSkinId?" active":"")+(locked?" locked":"");
+    el.onclick=()=>selectSkin(s.skinId);
 
-    el.onclick = () => {
-      selectedSkinId = s.skinId;
-      renderSkins();
-      renderPreview();
-    };
-
-    el.innerHTML = `
-      <div class="skin-image">
-        ${s.imageUrl ? `<img src="${s.imageUrl}">` : "🏎"}
-      </div>
-      <div>${s.skinName}</div>
+    el.innerHTML=`
+      <div class="skin-image">${renderSkin(s)}</div>
+      <h4>${escapeHtml(s.skinName || s.skinId)}</h4>
+      <div class="skin-level">Level ${s.unlockLevel}</div>
+      ${locked ? '<div class="skin-lock">🔒</div>' : ''}
     `;
 
     list.appendChild(el);
   });
 }
 
+function selectSkin(id){
+  selectedSkinId=id;
+  renderSkins();
+  renderPreview();
+
+  const notice=document.getElementById("notice");
+  notice.textContent="";
+  notice.className="notice";
+}
+
 function renderPreview(){
-  const s = skins.find(x => x.skinId === selectedSkinId);
+  const s=getSkin();
+
   if(!s) return;
 
-  if(s.imageUrl){
-    document.getElementById("previewCar").innerHTML =
-      `<img src="${s.imageUrl}">`;
+  document.getElementById("previewCar").innerHTML=renderSkin(s);
+  document.getElementById("previewName").textContent=s.skinName || s.skinId;
+  document.getElementById("previewDesc").textContent=s.type || "";
+
+  const useBtn=document.getElementById("useBtn");
+
+  if(isLocked(s)){
+    useBtn.disabled=true;
+    document.getElementById("notice").textContent="Skin terkunci. Butuh Level "+s.unlockLevel+".";
+    document.getElementById("notice").className="notice error";
   }else{
-    document.getElementById("previewCar").innerHTML = "🏎";
+    useBtn.disabled=false;
+  }
+}
+
+function renderSkin(s){
+  const url=String(s.imageUrl || "").trim();
+
+  if(url){
+    return `<img src="${url}" alt="${escapeHtml(s.skinName || s.skinId)}" onerror="this.outerHTML='🏎'">`;
   }
 
-  document.getElementById("previewName").textContent = s.skinName;
+  return "🏎";
 }
 
 function useSkin(){
-  const s = skins.find(x => x.skinId === selectedSkinId);
+  const s=getSkin();
+
   if(!s) return;
 
-  let user = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
+  const notice=document.getElementById("notice");
 
-  user.skinId = s.skinId;
-  user.skinImage = s.imageUrl;
+  if(isLocked(s)){
+    notice.textContent="Skin terkunci. Butuh Level "+s.unlockLevel+".";
+    notice.className="notice error";
+    return;
+  }
 
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(user));
+  selectedSkinId=s.skinId;
+  localStorage.setItem(SELECTED_SKIN_KEY,selectedSkinId);
 
-  alert("Skin dipakai ✓");
+  let user=getSavedUser();
+
+  user.skinId=s.skinId;
+  user.selectedSkin=s.skinId;
+  user.selectedSkinId=s.skinId;
+  user.skinImage=s.imageUrl;
+  user.selectedSkinImage=s.imageUrl;
+
+  localStorage.setItem(STORAGE_KEY,JSON.stringify(user));
+
+  notice.textContent="Skin dipakai ✓";
+  notice.className="notice";
+
+  renderSkins();
+  renderPreview();
+}
+
+function isLocked(s){
+  return userLevel < Number(s.unlockLevel || 1);
+}
+
+function getSkin(){
+  return skins.find(s=>s.skinId===selectedSkinId) || skins[0];
+}
+
+function escapeHtml(value){
+  return String(value || "")
+    .replace(/&/g,"&amp;")
+    .replace(/</g,"&lt;")
+    .replace(/>/g,"&gt;")
+    .replace(/"/g,"&quot;")
+    .replace(/'/g,"&#039;");
+}
+
+function goLobby(){
+  window.location.href="https://wpconvert.github.io/punyakita/lobby/index.html";
 }
 </script>
 
