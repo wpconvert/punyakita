@@ -13,6 +13,20 @@
       font-family: Arial, sans-serif;
     }
 
+    .car-loading {
+      color: #4c7c8e;
+      font-size: 11px;
+      font-weight: bold;
+      animation: pulseText 1s infinite;
+      text-align: center;
+      line-height: 1.1;
+    }
+
+    @keyframes pulseText {
+      0%,100% { opacity: .4; }
+      50% { opacity: 1; }
+    }
+
     body {
       min-height: 100vh;
       background:
@@ -339,6 +353,10 @@
         height: 40px;
       }
 
+      .car-loading {
+        font-size: 9px;
+      }
+
       .finish-line { right: 48px; }
 
       .lane-position {
@@ -384,21 +402,21 @@
     <div class="race-top">
       <div class="lane">
         <div class="lane-name" id="playerName">Player<br>(you)</div>
-        <div class="car" id="playerCar">🏎️</div>
+        <div class="car" id="playerCar"><span class="car-loading">Loading<br>skin...</span></div>
         <div class="finish-line"></div>
         <div class="lane-position" id="playerPos"></div>
       </div>
 
       <div class="lane">
         <div class="lane-name">Bot Cepat<br>(bot)</div>
-        <div class="car" id="botCar1">🚗</div>
+        <div class="car" id="botCar1"><span class="car-loading">Loading<br>skin...</span></div>
         <div class="finish-line"></div>
         <div class="lane-position" id="bot1Pos"></div>
       </div>
 
       <div class="lane">
         <div class="lane-name">Bot Santai<br>(bot)</div>
-        <div class="car" id="botCar2">🚙</div>
+        <div class="car" id="botCar2"><span class="car-loading">Loading<br>skin...</span></div>
         <div class="finish-line"></div>
         <div class="lane-position" id="bot2Pos"></div>
       </div>
@@ -491,6 +509,7 @@
       renderText("");
       setupTrackSize();
       resetCars();
+      showCarLoading();
       loadRaceSkins();
     });
 
@@ -507,6 +526,12 @@
       bot1.style.left = (trackStart + botProgress1) + "px";
       bot2.style.left = (trackStart + botProgress2) + "px";
     });
+
+    function showCarLoading() {
+      playerCar.innerHTML = '<span class="car-loading">Loading<br>skin...</span>';
+      bot1.innerHTML = '<span class="car-loading">Loading<br>skin...</span>';
+      bot2.innerHTML = '<span class="car-loading">Loading<br>skin...</span>';
+    }
 
     function setupTrackSize() {
       const lane = document.querySelector(".lane");
