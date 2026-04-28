@@ -5,14 +5,26 @@
   <title>Ubah Skin</title>
 
   <style>
-    *{box-sizing:border-box;margin:0;padding:0;font-family:Arial,sans-serif}
+  *{box-sizing:border-box;margin:0;padding:0;font-family:Arial,sans-serif}
 
-    body{
-      background:#07111f;
-      color:#eaf6ff;
-      padding:20px;
-      overflow-x:hidden;
-    }
+  .skin-loading{
+    color:#9db7cc;
+    font-size:14px;
+    animation:pulseText 1s infinite;
+  }
+
+  @keyframes pulseText{
+    0%,100%{opacity:.4}
+    50%{opacity:1}
+  }
+
+  body{
+    background:#07111f;
+    color:#eaf6ff;
+    padding:20px;
+    overflow-x:hidden;
+  }
+</style>
 
     .app{
       width:100%;
@@ -190,8 +202,10 @@
 
       <div class="preview-area">
         <div class="road">
-          <div class="preview-car" id="previewCar">🏎</div>
-        </div>
+          <div class="preview-car" id="previewCar">
+            <span class="skin-loading">Loading skin...</span>
+          </div>
+      </div>
 
         <h3 id="previewName">Default</h3>
         <p id="previewDesc">Skin awal</p>
