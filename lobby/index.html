@@ -44,6 +44,53 @@
     .exp-track{width:100%;height:12px;border-radius:999px;background:rgba(255,255,255,.08);overflow:hidden;border:1px solid rgba(100,223,255,.18)}
     .exp-fill{height:100%;width:0%;border-radius:999px;background:linear-gradient(135deg,#009dff,#00e0ff);box-shadow:0 0 16px rgba(0,224,255,.45);transition:.3s ease}
     .exp-text{margin-top:8px;color:#9db7cc;font-size:12px;text-align:right}
+
+    .skin-preview-card{
+      min-height:140px;
+      display:flex;
+      flex-direction:column;
+      justify-content:center;
+      align-items:center;
+      text-align:center;
+      border:2px solid rgba(255,43,43,.95);
+      background:rgba(10,25,45,.86);
+    }
+    .skin-preview-title{
+      color:#64dfff;
+      font-size:18px;
+      font-weight:bold;
+      margin-bottom:10px;
+    }
+    .skin-stage{
+      width:100%;
+      min-height:84px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      border-bottom:2px dashed #f0b629;
+      margin-bottom:10px;
+    }
+    .skin-stage img{
+      width:150px;
+      max-height:82px;
+      object-fit:contain;
+      image-rendering:pixelated;
+      filter:drop-shadow(0 4px 4px rgba(0,0,0,.35));
+    }
+    .skin-stage .emoji-car{
+      font-size:54px;
+    }
+    .skin-name{
+      color:#fff;
+      font-size:15px;
+      font-weight:bold;
+      margin-bottom:4px;
+    }
+    .skin-info{
+      color:#9db7cc;
+      font-size:12px;
+    }
+
     .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.64);display:none;justify-content:center;align-items:center;padding:18px;z-index:99}
     .modal{width:100%;max-width:420px;background:#0a192d;border:1px solid rgba(100,223,255,.28);border-radius:20px;padding:22px;box-shadow:0 0 35px rgba(0,224,255,.16);animation:pop .2s ease}
     @keyframes pop{from{transform:scale(.94);opacity:0}to{transform:scale(1);opacity:1}}
@@ -57,7 +104,7 @@
     .notice{margin-top:12px;color:#9db7cc;font-size:13px;line-height:1.4;min-height:18px}
     .notice.success{color:#4dffb8}
     .notice.error{color:#ff6b8a}
-    @media(max-width:820px){.topbar{flex-direction:column;align-items:stretch}.account-box{justify-content:space-between}.grid{grid-template-columns:1fr}.mode-list{grid-template-columns:1fr}.stats{grid-template-columns:1fr}}
+    @media(max-width:820px){.topbar{flex-direction:column;align-items:stretch}.account-box{justify-content:space-between}.grid{grid-template-columns:1fr}.mode-list{grid-template-columns:1fr}.stats{grid-template-columns:1fr}.skin-stage img{width:130px}}
   </style>
 </head>
 
@@ -157,6 +204,15 @@
             <button class="btn" onclick="joinRoom()">Join</button>
           </div>
         </div>
+
+        <div class="card skin-preview-card">
+          <div class="skin-preview-title">Skin Dipakai</div>
+          <div class="skin-stage" id="lobbySkinStage">
+            <span class="emoji-car">🏎️</span>
+          </div>
+          <div class="skin-name" id="lobbySkinName">Default</div>
+          <div class="skin-info" id="lobbySkinInfo">Skin aktif kamu</div>
+        </div>
       </div>
     </div>
   </div>
@@ -198,13 +254,16 @@
 
   <script>
     const GAS_URL = "https://script.google.com/macros/s/AKfycbzuzOVUk6zph03Bsk0jZpRhL4z2DF_CD7ESzdND62PcsnVk3LE-o9yupPUD729ULlk03g/exec";
+    const SKIN_GAS_URL = "https://script.google.com/macros/s/AKfycbzaV9UAd0p3a-IdlhXvhnPp4wU7vZLXE7nmbiPOSovAhe_uSbEKUQQ5foCUVVaIbWQBtQ/exec";
     const STORAGE_KEY = "typingRaceUser";
+    const SELECTED_SKIN_KEY = "selectedTypingSkin";
     const TYPERACE_URL = "https://wpconvert.github.io/punyakita/race/index.html";
     const TENFAST_URL = "https://wpconvert.github.io/punyakita/10fast/index.html";
     const MULTI_URL = "https://wpconvert.github.io/punyakita/racemulti/index.html";
 
     document.addEventListener("DOMContentLoaded", () => {
       initUser();
+      renderLobbySkin();
     });
 
     function initUser() {
@@ -219,10 +278,15 @@
           displayName: "Guest_" + guestNumber,
           level: 1,
           exp: 0,
-          selectedSkin: "default"
+          selectedSkin: "gray-car",
+          skinId: "gray-car",
+          selectedSkinId: "gray-car",
+          skinImage: "https://wpconvert.github.io/punyakita/skin/gray-car.png",
+          selectedSkinImage: "https://wpconvert.github.io/punyakita/skin/gray-car.png"
         };
 
         localStorage.setItem(STORAGE_KEY, JSON.stringify(guestUser));
+        localStorage.setItem(SELECTED_SKIN_KEY, "gray-car");
         savedUser = JSON.stringify(guestUser);
       }
 
@@ -255,6 +319,73 @@
         document.getElementById("loginBtn").style.display = "none";
         document.getElementById("logoutBtn").style.display = "inline-block";
       }
+    }
+
+    async function renderLobbySkin() {
+      const stage = document.getElementById("lobbySkinStage");
+      const nameEl = document.getElementById("lobbySkinName");
+      const infoEl = document.getElementById("lobbySkinInfo");
+
+      let user = {};
+      try {
+        user = JSON.parse(localStorage.getItem(STORAGE_KEY)) || {};
+      } catch (err) {}
+
+      let selectedSkinId = String(
+        user.selectedSkinId ||
+        user.skinId ||
+        user.selectedSkin ||
+        localStorage.getItem(SELECTED_SKIN_KEY) ||
+        "gray-car"
+      ).trim();
+
+      let selectedSkinImage = String(
+        user.selectedSkinImage ||
+        user.skinImage ||
+        ""
+      ).trim();
+
+      let selectedSkinName = selectedSkinId || "gray-car";
+      let selectedSkinLevel = 1;
+
+      try {
+        const res = await fetch(SKIN_GAS_URL + "?t=" + Date.now());
+        const json = await res.json();
+        const skins = Array.isArray(json.data) ? json.data : [];
+
+        const found = skins.find(s => String(s.skinId || "").trim() === selectedSkinId);
+
+        if (found) {
+          selectedSkinName = found.skinName || found.skinId || selectedSkinName;
+          selectedSkinImage = found.imageUrl || selectedSkinImage;
+          selectedSkinLevel = Number(found.unlockLevel || 1);
+        }
+      } catch (err) {}
+
+      if (selectedSkinImage) {
+        stage.innerHTML = `<img src="${escapeAttr(selectedSkinImage)}" alt="skin" onerror="this.outerHTML='<span class=&quot;emoji-car&quot;>🏎️</span>'">`;
+      } else {
+        stage.innerHTML = `<span class="emoji-car">🏎️</span>`;
+      }
+
+      nameEl.textContent = selectedSkinName || "Default";
+      infoEl.textContent = "Level " + selectedSkinLevel + " • Skin aktif";
+    }
+
+    function preserveSkinFields(newUser) {
+      let oldUser = {};
+
+      try {
+        oldUser = JSON.parse(localStorage.getItem(STORAGE_KEY)) || {};
+      } catch (err) {}
+
+      newUser.skinId = oldUser.skinId || oldUser.selectedSkinId || oldUser.selectedSkin || newUser.skinId || newUser.selectedSkin || "gray-car";
+      newUser.selectedSkin = oldUser.selectedSkin || oldUser.skinId || oldUser.selectedSkinId || newUser.selectedSkin || newUser.skinId || "gray-car";
+      newUser.selectedSkinId = oldUser.selectedSkinId || oldUser.skinId || oldUser.selectedSkin || newUser.selectedSkinId || newUser.skinId || "gray-car";
+      newUser.skinImage = oldUser.skinImage || oldUser.selectedSkinImage || newUser.skinImage || "";
+      newUser.selectedSkinImage = oldUser.selectedSkinImage || oldUser.skinImage || newUser.selectedSkinImage || "";
+
+      return newUser;
     }
 
     function openLoginModal() {
@@ -323,18 +454,22 @@
           return;
         }
 
-        const user = {
+        let user = {
           type: "user",
           username: data.user.username,
           displayName: data.user.username,
           level: data.user.level || 1,
           exp: data.user.exp || 0,
-          selectedSkin: data.user.selectedSkin || "default",
+          selectedSkin: data.user.selectedSkin || "gray-car",
           unlockedSkins: data.unlockedSkins || []
         };
 
+        user = preserveSkinFields(user);
+
         localStorage.setItem(STORAGE_KEY, JSON.stringify(user));
+        localStorage.setItem(SELECTED_SKIN_KEY, user.selectedSkinId || user.skinId || "gray-car");
         updateUserUI(user);
+        renderLobbySkin();
         setNotice("registerNotice", "Sukses Register ✓", "success");
 
         setTimeout(() => {
@@ -369,18 +504,22 @@
           return;
         }
 
-        const user = {
+        let user = {
           type: "user",
           username: data.user.username,
           displayName: data.user.username,
           level: data.user.level || 1,
           exp: data.user.exp || 0,
-          selectedSkin: data.user.selectedSkin || "default",
+          selectedSkin: data.user.selectedSkin || "gray-car",
           unlockedSkins: data.unlockedSkins || []
         };
 
+        user = preserveSkinFields(user);
+
         localStorage.setItem(STORAGE_KEY, JSON.stringify(user));
+        localStorage.setItem(SELECTED_SKIN_KEY, user.selectedSkinId || user.skinId || "gray-car");
         updateUserUI(user);
+        renderLobbySkin();
         setNotice("loginNotice", "Sukses Login ✓", "success");
 
         setTimeout(() => {
@@ -400,24 +539,29 @@
           return;
         }
 
-        const user = {
+        let user = {
           type: "user",
           username: data.user.username,
           displayName: data.user.username,
           level: data.user.level || 1,
           exp: data.user.exp || 0,
-          selectedSkin: data.user.selectedSkin || "default",
+          selectedSkin: data.user.selectedSkin || "gray-car",
           unlockedSkins: data.unlockedSkins || []
         };
 
+        user = preserveSkinFields(user);
+
         localStorage.setItem(STORAGE_KEY, JSON.stringify(user));
+        localStorage.setItem(SELECTED_SKIN_KEY, user.selectedSkinId || user.skinId || "gray-car");
         updateUserUI(user);
+        renderLobbySkin();
       } catch (err) {}
     }
 
     function logoutUser() {
       localStorage.removeItem(STORAGE_KEY);
       initUser();
+      renderLobbySkin();
     }
 
     function startMode(mode) {
@@ -533,6 +677,15 @@
       }
 
       return id;
+    }
+
+    function escapeAttr(value) {
+      return String(value || "")
+        .replace(/&/g, "&amp;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;");
     }
   </script>
 </body>
