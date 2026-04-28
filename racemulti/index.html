@@ -125,7 +125,7 @@
 
     .lane {
       position: relative;
-      height: 62px;
+      height: 70px;
       border-bottom: 2px dashed #f0b629;
       overflow: hidden;
       width: 100%;
@@ -147,7 +147,7 @@
     .ready-icon {
       position: absolute;
       left: 140px;
-      top: 18px;
+      top: 20px;
       width: 28px;
       font-size: 22px;
       text-align: center;
@@ -157,11 +157,26 @@
     .car {
       position: absolute;
       left: 175px;
-      top: 8px;
+      top: 5px;
       font-size: 38px;
       transition: left 0.12s linear;
       filter: drop-shadow(0 2px 2px rgba(0,0,0,0.2));
       z-index: 2;
+      width: 60px;
+      height: 60px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .car img {
+      width: 60px;
+      height: 60px;
+      object-fit: contain;
+      display: block;
+      pointer-events: none;
+      user-select: none;
+      image-rendering: pixelated;
     }
 
     .finish-line {
@@ -177,7 +192,7 @@
     .lane-position {
       position: absolute;
       right: 10px;
-      top: 20px;
+      top: 24px;
       width: 50px;
       text-align: left;
       font-size: 15px;
@@ -274,6 +289,36 @@
       .target-text { font-size: 18px; }
       .input-box { font-size: 18px; }
       .result-grid { grid-template-columns: repeat(2, 1fr); }
+
+      .lane-name {
+        width: 90px;
+        font-size: 12px;
+        padding-right: 8px;
+      }
+
+      .ready-icon {
+        left: 100px;
+      }
+
+      .car {
+        width: 52px;
+        height: 52px;
+      }
+
+      .car img {
+        width: 52px;
+        height: 52px;
+      }
+
+      .finish-line {
+        right: 48px;
+      }
+
+      .lane-position {
+        right: 4px;
+        width: 38px;
+        font-size: 13px;
+      }
     }
   </style>
 </head>
@@ -335,7 +380,8 @@
         <div class="stat-box"><strong id="resultExp">0</strong><span>EXP</span></div>
       </div>
     </div>
-      </div>
+  </div>
+
   <script>
     const firebaseConfig = {
       apiKey: "AIzaSyBsl2mWDEInWhmNkAKGsTERUladGCjv3nM",
@@ -352,6 +398,8 @@
 
     const STORAGE_KEY = "typingRaceUser";
     const PLAYER_ID_KEY = "typingRacePlayerId";
+    const SELECTED_SKIN_KEY = "selectedTypingSkin";
+    const SKIN_GAS_URL = "https://script.google.com/macros/s/AKfycbzaV9UAd0p3a-IdlhXvhnPp4wU7vZLXE7nmbiPOSovAhe_uSbEKUQQ5foCUVVaIbWQBtQ/exec";
     const RACE_DURATION = 30;
 
     const texts = [
@@ -374,6 +422,7 @@
     let roomId = getRoomId();
     let playerId = getPlayerId();
     let playerDisplayName = getPlayerName();
+    let playerSkinData = null;
     let text = "";
     let correctIndex = 0;
     let started = false;
@@ -391,7 +440,7 @@
     let resetTimer = null;
     let raceTimer = null;
 
-    const trackStart = 175;
+    let trackStart = 175;
 
     const target = document.getElementById("targetText");
     const input = document.getElementById("typingInput");
@@ -405,16 +454,23 @@
     input.addEventListener("drop", (e) => e.preventDefault());
 
     window.addEventListener("resize", () => {
+      setupTrackStart();
       renderPlayers(currentPlayers);
     });
 
-    document.addEventListener("DOMContentLoaded", () => {
+    document.addEventListener("DOMContentLoaded", async () => {
       document.getElementById("roomIdText").textContent = roomId;
       document.getElementById("roomLinkText").textContent = window.location.href;
+      setupTrackStart();
+      playerSkinData = await loadMySelectedSkin();
       setupRoom();
       listenRoom();
       renderTextPlaceholder();
     });
+
+    function setupTrackStart() {
+      trackStart = window.innerWidth <= 700 ? 125 : 175;
+    }
 
     function getMaxMove() {
       const width = lanes.clientWidth || document.querySelector(".app").clientWidth || 1000;
@@ -457,6 +513,115 @@
       } catch (err) {
         return "Guest";
       }
+    }
+
+    async function loadMySelectedSkin() {
+      let user = {};
+
+      try {
+        user = JSON.parse(localStorage.getItem(STORAGE_KEY)) || {};
+      } catch (err) {}
+
+      const savedSkinId = String(
+        user.selectedSkinId ||
+        user.skinId ||
+        user.selectedSkin ||
+        user.skin ||
+        localStorage.getItem(SELECTED_SKIN_KEY) ||
+        ""
+      ).trim();
+
+      const savedSkinImage = String(
+        user.selectedSkinImage ||
+        user.skinImage ||
+        ""
+      ).trim();
+
+      try {
+        const res = await fetch(SKIN_GAS_URL + "?t=" + Date.now());
+        const json = await res.json();
+
+        const skins = normalizeSkins(json)
+          .map(normalizeSkin)
+          .filter(s => String(s.status || "ACTIVE").toUpperCase() === "ACTIVE");
+
+        let found = null;
+
+        if (savedSkinId) {
+          found = skins.find(s => s.skinId === savedSkinId);
+        }
+
+        if (!found && savedSkinImage) {
+          found = skins.find(s => s.imageUrl === savedSkinImage);
+        }
+
+        if (!found) {
+          found = skins.find(s => Number(s.unlockLevel) === 1 && String(s.type || "").toLowerCase() === "default") || skins[0];
+        }
+
+        if (found) {
+          return {
+            skinId: found.skinId,
+            skinName: found.skinName,
+            skinImage: found.imageUrl
+          };
+        }
+
+      } catch (err) {
+        console.log("Gagal load skin multiplayer:", err);
+      }
+
+      return {
+        skinId: savedSkinId || "",
+        skinName: savedSkinId || "",
+        skinImage: savedSkinImage || ""
+      };
+    }
+
+    function normalizeSkins(json) {
+      if (Array.isArray(json)) return json;
+      if (json && Array.isArray(json.data)) return json.data;
+      if (json && Array.isArray(json.skins)) return json.skins;
+      if (json && json.status === "success" && Array.isArray(json.result)) return json.result;
+      return [];
+    }
+
+    function normalizeSkin(raw) {
+      const lower = {};
+
+      Object.keys(raw || {}).forEach(key => {
+        lower[String(key).toLowerCase().replace(/\s/g, "").trim()] = raw[key];
+      });
+
+      const skinId = String(raw.skinId || raw.id || lower.skinid || lower.id || "").trim();
+      const skinName = String(raw.skinName || raw.name || lower.skinname || lower.name || skinId).trim();
+      const type = String(raw.type || lower.type || "").trim();
+      const imageUrl = String(raw.imageUrl || raw.imageurl || raw.image || raw.img || raw.url || raw.value || lower.imageurl || lower.image || lower.img || lower.url || lower.value || "").trim();
+
+      let unlockLevel = Number(raw.unlockLevel || raw.unlocklevel || raw.level || lower.unlocklevel || lower.level || "");
+
+      if (!unlockLevel || isNaN(unlockLevel)) {
+        const match = type.match(/\d+/);
+        unlockLevel = match ? Number(match[0]) : 1;
+      }
+
+      const status = String(raw.status || lower.status || "ACTIVE").trim();
+
+      return { skinId, skinName, type, imageUrl, unlockLevel, status };
+    }
+        function getMySkinPayload() {
+      if (!playerSkinData) {
+        return {
+          skinId: "",
+          skinName: "",
+          skinImage: ""
+        };
+      }
+      return {
+        skinId: playerSkinData.skinId || "",
+        skinName: playerSkinData.skinName || "",
+        skinImage: playerSkinData.skinImage || ""
+      };
     }
 
     function setupRoom() {
@@ -505,7 +670,8 @@
         ready: false,
         status: "waiting",
         position: "",
-        joinedAt: Date.now()
+        joinedAt: Date.now(),
+        ...getMySkinPayload()
       });
 
       myPlayerRef.onDisconnect().remove();
@@ -526,10 +692,28 @@
         ready: false,
         status: "waiting",
         position: "",
-        joinedAt: Date.now()
+        joinedAt: Date.now(),
+        ...getMySkinPayload()
       });
 
       myPlayerRef.onDisconnect().remove();
+    }
+
+    function syncMySkinToRoom() {
+      if (!hasJoined || !playerSkinData) return;
+
+      const me = currentPlayers[playerId];
+      if (!me) return;
+
+      const payload = getMySkinPayload();
+
+      if (
+        me.skinId !== payload.skinId ||
+        me.skinImage !== payload.skinImage ||
+        me.skinName !== payload.skinName
+      ) {
+        myPlayerRef.update(payload);
+      }
     }
 
     function leaveRoom() {
@@ -565,6 +749,7 @@
           return;
         }
 
+        syncMySkinToRoom();
         renderPlayers(currentPlayers);
         updateButtons();
         updateRoomStatus(data);
@@ -729,17 +914,28 @@
 
         const progress = Number(player.progress || 0);
         const left = trackStart + progress * maxMove;
+        const carHtml = renderPlayerCar(player);
 
         lane.innerHTML = `
           <div class="lane-name">${escapeHtml(player.name || "Player")}<br>${player.id === playerId ? "(you)" : "(player)"}</div>
           <div class="ready-icon">${readyIcon}</div>
-          <div class="car" style="left:${left}px;">${player.id === playerId ? "🏎️" : "🚗"}</div>
+          <div class="car" style="left:${left}px;">${carHtml}</div>
           <div class="finish-line"></div>
           <div class="lane-position">${player.position || ""}</div>
         `;
 
         lanes.appendChild(lane);
       });
+    }
+
+    function renderPlayerCar(player) {
+      const image = String(player.skinImage || player.selectedSkinImage || "").trim();
+
+      if (image) {
+        return `<img src="${escapeAttr(image)}" alt="skin" onerror="this.outerHTML='🚗'">`;
+      }
+
+      return player.id === playerId ? "🏎️" : "🚗";
     }
 
     function toggleReady() {
@@ -1103,6 +1299,15 @@
         .replace(/>/g, "&gt;")
         .replace(/"/g, "&quot;")
         .replace(/'/g, "&#039;");
+    }
+
+    function escapeAttr(value) {
+      return String(value || "")
+        .replace(/&/g, "&amp;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;");
     }
 
     function goBack() {
