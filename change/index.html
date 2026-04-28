@@ -221,6 +221,7 @@
 const STORAGE_KEY = "typingRaceUser";
 const SELECTED_SKIN_KEY = "selectedTypingSkin";
 const SKIN_GAS_URL = "https://script.google.com/macros/s/AKfycbzaV9UAd0p3a-IdlhXvhnPp4wU7vZLXE7nmbiPOSovAhe_uSbEKUQQ5foCUVVaIbWQBtQ/exec";
+const USER_GAS_URL = "https://script.google.com/macros/s/AKfycbxp6-xIPz-JHHeFKwICYmPBnyb0IXqK-x7P9DtwxPtu9-beT7k5MufP5hKg3XFK6mhQ/exec";
 
 let skins = [];
 let selectedSkinId = localStorage.getItem(SELECTED_SKIN_KEY) || "";
@@ -252,8 +253,37 @@ async function loadSkins(){
         return;
       }
 
-      const savedUser=getSavedUser();
-      const savedSkinId=savedUser.selectedSkinId || savedUser.skinId || savedUser.selectedSkin || savedUser.skin || "";
+      let savedUser=getSavedUser();
+      let savedSkinId=savedUser.selectedSkinId || savedUser.skinId || savedUser.selectedSkin || savedUser.skin || "";
+
+      if(savedUser.username){
+        try{
+          const profileRes=await fetch(USER_GAS_URL + "?action=getProfile&username=" + encodeURIComponent(savedUser.username) + "&t=" + Date.now());
+          const profileData=await profileRes.json();
+
+          if(profileData.status==="success" && profileData.user && profileData.user.selectedSkin){
+            savedSkinId=profileData.user.selectedSkin;
+
+            savedUser.selectedSkin=savedSkinId;
+            savedUser.selectedSkinId=savedSkinId;
+            savedUser.skinId=savedSkinId;
+
+            if(profileData.user.level){
+              savedUser.level=profileData.user.level;
+              userLevel=Number(profileData.user.level || 1);
+            }
+
+            if(profileData.user.exp !== undefined){
+              savedUser.exp=profileData.user.exp;
+            }
+
+            localStorage.setItem(STORAGE_KEY,JSON.stringify(savedUser));
+            localStorage.setItem(SELECTED_SKIN_KEY,savedSkinId);
+          }
+        }catch(err){
+          console.log("Gagal ambil selectedSkin dari akun:",err);
+        }
+      }
 
       if(savedSkinId){
         selectedSkinId=savedSkinId;
@@ -465,8 +495,8 @@ function useSkin(){
 
   localStorage.setItem(STORAGE_KEY,JSON.stringify(user));
 
-  if(user.type === "user" && user.username){
-    fetch("https://script.google.com/macros/s/AKfycbzuzOVUk6zph03Bsk0jZpRhL4z2DF_CD7ESzdND62PcsnVk3LE-o9yupPUD729ULlk03g/exec?action=updateSkin&username=" + encodeURIComponent(user.username) + "&skinId=" + encodeURIComponent(s.skinId))
+  if(user.username){
+    fetch(USER_GAS_URL + "?action=updateSkin&username=" + encodeURIComponent(user.username) + "&skinId=" + encodeURIComponent(s.skinId))
       .catch(err => console.log("Gagal simpan skin ke akun:", err));
   }
 
